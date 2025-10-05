@@ -10,37 +10,64 @@ const NUM_ROWS: usize = 4;
 const NUM_COLUMNS: usize = 4;
 const NUM_TILES: usize = NUM_ROWS * NUM_COLUMNS;
 
-pub(crate) struct Board {
+pub(crate) struct Board<F1, F2>
+where
+    F1: FnMut() -> u32,
+    F2: FnMut() -> usize,
+{
     score: u32,
     tiles: [Tile; NUM_TILES],
+    random_tile_value: F1,
+    random_index: F2,
 }
 
-impl Board {
-    pub fn new() -> Board {
+impl Board<fn() -> u32, fn() -> usize> {
+    pub fn new() -> Board<impl FnMut() -> u32, impl FnMut() -> usize> {
+        let mut tile_rng = rand::rng();
+        let mut index_rng = rand::rng();
+
         let mut board = Board {
             score: 0,
             tiles: [Tile::Empty; NUM_TILES],
+            random_tile_value: move || {
+                if tile_rng.random::<f64>() <= 0.1 {
+                    4
+                } else {
+                    2
+                }
+            },
+            random_index: move || index_rng.random_range(0..NUM_TILES),
         };
         board.place_random_tile();
         board.place_random_tile();
         board
     }
+}
 
-    fn new_with_tiles(tiles: [Tile; NUM_TILES]) -> Board {
+impl<F1, F2> Board<F1, F2>
+where
+    F1: FnMut() -> u32,
+    F2: FnMut() -> usize,
+{
+    fn new_with_tiles(
+        tiles: [Tile; NUM_TILES],
+        random_tile_value: F1,
+        random_index: F2,
+    ) -> Board<F1, F2> {
         Board {
             score: 0,
             tiles: tiles,
+            random_tile_value: random_tile_value,
+            random_index: random_index,
         }
     }
 
     fn place_random_tile(&mut self) {
         // TODO: check for full board
-        let mut rng = rand::rng();
-        let value = if rng.random::<f64>() <= 0.1 { 4 } else { 2 };
         loop {
-            let index = rng.random_range(0..NUM_TILES);
+            let index = (self.random_index)();
             if self.tiles[index] == Tile::Empty {
-                self.tiles[index] = Tile::Value(value);
+                self.tiles[index] = Tile::Value((self.random_tile_value)());
                 break;
             }
         }
@@ -63,6 +90,7 @@ impl Board {
                 }
             }
         }
+        self.place_random_tile();
     }
 
     pub fn move_left(&mut self) {
@@ -82,6 +110,7 @@ impl Board {
                 }
             }
         }
+        self.place_random_tile();
     }
 
     pub fn move_down(&mut self) {
@@ -101,6 +130,7 @@ impl Board {
                 }
             }
         }
+        self.place_random_tile();
     }
 
     pub fn move_up(&mut self) {
@@ -120,16 +150,19 @@ impl Board {
                 }
             }
         }
+        self.place_random_tile();
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use super::Tile::*;
     use super::*;
 
     // Tests:
     // [x] Board initialization
-    // [ ] Moves
+    // [x] Moves
+    // [x] Random tile after the move
     // [ ] Merging two tiles
     // [ ] Merging two tiles when 3 tiles in row/column have the same value
     // [ ] Merging tiles when 4 tiles in row/column have the same value
@@ -161,7 +194,8 @@ mod tests {
 
     #[test]
     fn move_right() {
-        use super::Tile::*;
+        let new_tile_value = || 2;
+        let new_tile_index = || 0;
 
         #[rustfmt::skip]
         let mut board = Board::new_with_tiles([
@@ -169,11 +203,11 @@ mod tests {
             Value(2), Value(4), Empty,    Empty,
             Value(2), Value(4), Value(8), Empty,
             Value(2), Value(4), Value(8), Value(16),
-        ]);
+        ], new_tile_value, new_tile_index);
 
         #[rustfmt::skip]
         let expected_result: [Tile; _] = [
-            Empty,    Empty,    Empty,    Value(2), 
+            Value(2), Empty,    Empty,    Value(2), 
             Empty,    Empty,    Value(2), Value(4), 
             Empty,    Value(2), Value(4), Value(8),
             Value(2), Value(4), Value(8), Value(16),
@@ -186,7 +220,8 @@ mod tests {
 
     #[test]
     fn move_left() {
-        use super::Tile::*;
+        let new_tile_value = || 2;
+        let new_tile_index = || 3;
 
         #[rustfmt::skip]
         let mut board = Board::new_with_tiles([
@@ -194,11 +229,11 @@ mod tests {
             Empty,    Empty,    Value(2), Value(4), 
             Empty,    Value(2), Value(4), Value(8),
             Value(2), Value(4), Value(8), Value(16),
-        ]);
+        ], new_tile_value, new_tile_index);
 
         #[rustfmt::skip]
         let expected_result: [Tile; _] = [
-            Value(2), Empty,    Empty,    Empty,
+            Value(2), Empty,    Empty,    Value(2),
             Value(2), Value(4), Empty,    Empty,
             Value(2), Value(4), Value(8), Empty,
             Value(2), Value(4), Value(8), Value(16),
@@ -211,7 +246,8 @@ mod tests {
 
     #[test]
     fn move_down() {
-        use super::Tile::*;
+        let new_tile_value = || 2;
+        let new_tile_index = || 0;
 
         #[rustfmt::skip]
         let mut board = Board::new_with_tiles([
@@ -219,11 +255,11 @@ mod tests {
             Empty,    Value(2), Value(4), Value(8),
             Empty,    Empty,    Value(2), Value(4), 
             Empty,    Empty,    Empty,    Value(2), 
-        ]);
+        ], new_tile_value, new_tile_index);
 
         #[rustfmt::skip]
         let expected_result: [Tile; _] = [
-            Empty,    Empty,    Empty,     Value(16),
+            Value(2), Empty,    Empty,     Value(16),
             Empty,    Empty,    Value(8),  Value(8),
             Empty,    Value(4), Value(4),  Value(4), 
             Value(2), Value(2), Value(2),  Value(2), 
@@ -236,7 +272,8 @@ mod tests {
 
     #[test]
     fn move_up() {
-        use super::Tile::*;
+        let new_tile_value = || 2;
+        let new_tile_index = || 12;
 
         #[rustfmt::skip]
         let mut board = Board::new_with_tiles([
@@ -244,14 +281,14 @@ mod tests {
             Empty,    Empty,    Value(8),  Value(8),
             Empty,    Value(4), Value(4),  Value(4), 
             Value(2), Value(2), Value(2),  Value(2), 
-        ]);
+        ], new_tile_value, new_tile_index);
 
         #[rustfmt::skip]
         let expected_result: [Tile; _] = [
             Value(2), Value(4), Value(8), Value(16),
             Empty,    Value(2), Value(4), Value(8),
             Empty,    Empty,    Value(2), Value(4), 
-            Empty,    Empty,    Empty,    Value(2), 
+            Value(2), Empty,    Empty,    Value(2), 
         ];
 
         board.move_up();
