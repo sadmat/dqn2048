@@ -1,0 +1,69 @@
+export global Style {
+    out property <length> tile-size: 107px;
+    out property <length> margin: 16px;
+    out property <length> corner-radius: 8px;
+
+    public pure function tile-font-size(value: int) -> length {
+        if (value >= 2 && value < 16) {
+            return 55px;
+        } else if (value >= 16 && value < 128) {
+            return 45px;
+        } else if (value >= 128 && value < 1024) {
+            return 35px;
+        } else {
+            return 30px;
+        }
+    }
+}
+
+export global Colors {
+    out property <color> background: #bbada0;
+    out property <color> empty-tile: #cdc1b4;
+    out property <color> tile2: #EEE4DA;
+    out property <color> tile4: #EDE0C8;
+    out property <color> tile8: #F2B179;
+    out property <color> tile16: #F59563;
+    out property <color> tile32: #F67C5F;
+    out property <color> tile64: #F65E3B;
+    out property <color> tile128: #EDCF72;
+    out property <color> tile256: #EDCC61;
+    out property <color> tile512: #EDC850;
+    out property <color> tile1024: #EDC53F;
+    out property <color> tile2048: #EDC22E;
+
+    public pure function tile-color(value: int) -> color {
+        if (value == 2) {
+            return tile2;
+        } else if (value == 4) {
+            return tile4;
+        } else if (value == 8) {
+            return tile8;
+        } else if (value == 16) {
+            return tile16;
+        } else if (value == 32) {
+            return tile32;
+        } else if (value == 64) {
+            return tile64;
+        } else if (value == 128) {
+            return tile128;
+        } else if (value == 256) {
+            return tile256;
+        } else if (value == 512) {
+            return tile512;
+        } else if (value == 1024) {
+            return tile1024;
+        } else if (value == 2048) {
+            return tile2048;
+        } else {
+            return empty-tile;
+        }
+    }
+
+    public pure function tile-font-color(value: int) -> color {
+        if (value == 2 || value == 4) {
+            return #776e65;
+        } else {
+            return #f9f6f2;
+        }
+    }
+}
