@@ -1,7 +1,4 @@
-use rand::distr::slice::Empty;
 use rand::prelude::*;
-use std::io;
-use std::io::Write;
 
 #[derive(Copy, Clone, PartialEq, Debug)]
 pub(crate) enum Tile {

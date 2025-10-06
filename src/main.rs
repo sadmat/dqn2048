@@ -3,7 +3,6 @@
 
 mod game;
 
-use game::board;
 use std::error::Error;
 
 slint::include_modules!();
