@@ -16,18 +16,6 @@ pub(crate) enum Direction {
     Right,
 }
 
-#[derive(PartialEq, Copy, Clone, Debug)]
-enum VerticalDirection {
-    Up,
-    Down,
-}
-
-#[derive(PartialEq, Copy, Clone, Debug)]
-enum HorizontalDirection {
-    Left,
-    Right,
-}
-
 const NUM_ROWS: usize = 4;
 const NUM_COLUMNS: usize = 4;
 const NUM_TILES: usize = NUM_ROWS * NUM_COLUMNS;
@@ -97,132 +85,99 @@ where
     }
 
     pub fn move_right(&mut self) {
-        self.move_tiles(Direction::Right);
+        let mut merged_tiles = [false; NUM_TILES];
+        for column in (0..NUM_COLUMNS - 1).rev() {
+            for row in 0..NUM_ROWS {
+                self.slide_tile(row, column, Direction::Right, &mut merged_tiles);
+            }
+        }
+        self.place_random_tile();
     }
 
     pub fn move_left(&mut self) {
-        self.move_tiles(Direction::Left);
+        let mut merged_tiles = [false; NUM_TILES];
+        for column in 1..NUM_COLUMNS {
+            for row in 0..NUM_ROWS {
+                self.slide_tile(row, column, Direction::Left, &mut merged_tiles);
+            }
+        }
+        self.place_random_tile();
     }
 
     pub fn move_down(&mut self) {
-        self.move_tiles(Direction::Down);
+        let mut merged_tiles = [false; NUM_TILES];
+        for row in (0..NUM_ROWS - 1).rev() {
+            for column in 0..NUM_COLUMNS {
+                self.slide_tile(row, column, Direction::Down, &mut merged_tiles);
+            }
+        }
+        self.place_random_tile();
     }
 
     pub fn move_up(&mut self) {
-        self.move_tiles(Direction::Up);
-    }
-
-    fn move_tiles(&mut self, direction: Direction) {
-        println!("entering move_tiles({:?})", direction);
-        io::stdout().flush().unwrap();
-        let mut merged = [false; NUM_TILES];
-        if let Some(direction) = direction.horizontal_direction() {
-            let mut column = direction.start_from();
-            while (0..NUM_COLUMNS).contains(&column) {
-                self.move_column(column, direction, &mut merged);
-                column = direction.next_column(column);
-            }
-        } else if let Some(direction) = direction.vertical_direction() {
-            let mut row = direction.start_from();
-            while (0..NUM_ROWS).contains(&row) {
-                self.move_row(row, direction, &mut merged);
-                row = direction.next_row(row);
+        let mut merged_tiles = [false; NUM_TILES];
+        for row in 1..NUM_ROWS {
+            for column in 0..NUM_COLUMNS {
+                self.slide_tile(row, column, Direction::Up, &mut merged_tiles);
             }
         }
-        println!("move_tiles({:?}): before place_random_tile", direction);
-        io::stdout().flush().unwrap();
         self.place_random_tile();
-        println!("exiting move_tiles({:?})", direction);
-        io::stdout().flush().unwrap();
     }
 
-    fn move_column(
-        &mut self,
-        column: usize,
-        direction: HorizontalDirection,
-        merged_tiles: &mut [bool; NUM_TILES],
-    ) {
-        if direction == HorizontalDirection::Left && column == 0 { return; }
-        if direction == HorizontalDirection::Right && column == NUM_COLUMNS - 1 { return; }
-
-        'rows: for row in 0..NUM_ROWS {
-            let source_index = index(row, column);
-            let Tile::Value(source_value) = self.tiles[source_index] else {
-                continue;
-            };
-
-            let mut last_empty_column = column;
-            let mut target_column = direction.next_column(column);
-            while (0..NUM_COLUMNS).contains(&target_column) {
-                let target_index = index(row, target_column);
-
-                if self.tiles[target_index] == Tile::Empty {
-                    last_empty_column = target_column;
-                } else if let Tile::Value(target_value) = self.tiles[target_index] {
-                    // Can we merge the tiles?
-                    if source_value == target_value && !merged_tiles[target_index] {
-                        self.tiles[source_index] = Tile::Empty;
-                        self.tiles[target_index] = Tile::Value(source_value + target_value);
-                        self.score += source_value + target_value;
-                        merged_tiles[target_index] = true;
-                        continue 'rows;
-                    }
-                    // No more empty fields
-                    break;
-                }
-                target_column = direction.next_column(target_column);
-            }
-
-            let target_index = index(row, last_empty_column);
-            if target_index != source_index {
-                self.tiles[source_index] = Tile::Empty;
-                self.tiles[target_index] = Tile::Value(source_value);
-            }
-        }
-    }
-
-    fn move_row(
+    fn slide_tile(
         &mut self,
         row: usize,
-        direction: VerticalDirection,
+        column: usize,
+        direction: Direction,
         merged_tiles: &mut [bool; NUM_TILES],
     ) {
-        if direction == VerticalDirection::Up && row == 0 { return; }
-        if direction == VerticalDirection::Down && row == NUM_ROWS - 1 { return; }
+        let source_index = index(row, column);
+        let Tile::Value(source_tile) = self.tiles[source_index] else {
+            return;
+        };
 
-        'columns: for column in 0..NUM_COLUMNS {
-            let source_index = index(row, column);
-            let Tile::Value(source_value) = self.tiles[source_index] else {
-                continue;
-            };
+        let (dx, dy) = direction.vector();
+        let mut target_row = row;
+        let mut target_column = column;
 
-            let mut last_empty_row = row;
-            let mut target_row = direction.next_row(row);
-            while (0..NUM_ROWS).contains(&target_row) {
-                let target_index = index(target_row, column);
+        // while (0..NUM_ROWS).contains(&(target_row + ))
+        //     && (0..NUM_COLUMNS).contains(&(target_column + 1))
+        loop {
+            let next_row = (target_row as i32 + dy as i32) as usize;
+            let next_column = (target_column as i32 + dx as i32) as usize;
 
-                if self.tiles[target_index] == Tile::Empty {
-                    last_empty_row = target_row;
-                } else if let Tile::Value(target_value) = self.tiles[target_index] {
-                    // Can we merge the tiles?
-                    if source_value == target_value && !merged_tiles[target_index] {
-                        self.tiles[source_index] = Tile::Empty;
-                        self.tiles[target_index] = Tile::Value(source_value + target_value);
-                        self.score += source_value + target_value;
-                        merged_tiles[target_index] = true;
-                        continue 'columns;
+            if !(0..NUM_ROWS).contains(&next_row) || !(0..NUM_COLUMNS).contains(&next_column) {
+                break;
+            }
+
+            let next_index = index(next_row, next_column);
+
+            match self.tiles[next_index] {
+                Tile::Empty => {
+                    target_row = next_row;
+                    target_column = next_column;
+                }
+                Tile::Value(target_value) => {
+                    if target_value == source_tile && !merged_tiles[next_index] {
+                        target_row = next_row;
+                        target_column = next_column;
                     }
-                    // No more empty fields
                     break;
                 }
-                target_row = direction.next_row(target_row);
             }
+        }
 
-            let target_index = index(last_empty_row, column);
-            if target_index != source_index {
-                self.tiles[source_index] = Tile::Empty;
-                self.tiles[target_index] = Tile::Value(source_value);
-            }
+        let target_index = index(target_row, target_column);
+        if target_index == source_index {
+            return;
+        } else if let Tile::Value(target_value) = self.tiles[target_index] {
+            self.tiles[target_index] = Tile::Value(source_tile + target_value);
+            self.tiles[source_index] = Tile::Empty;
+            merged_tiles[target_index] = true;
+            self.score += source_tile + target_value;
+        } else {
+            self.tiles[target_index] = self.tiles[source_index];
+            self.tiles[source_index] = Tile::Empty;
         }
     }
 }
@@ -232,60 +187,13 @@ fn index(row: usize, column: usize) -> usize {
 }
 
 impl Direction {
-    fn vertical_direction(&self) -> Option<VerticalDirection> {
+    fn vector(&self) -> (isize, isize) {
         match self {
-            Direction::Up => Some(VerticalDirection::Up),
-            Direction::Down => Some(VerticalDirection::Down),
-            _ => None,
+            Direction::Up => (0, -1),
+            Direction::Down => (0, 1),
+            Direction::Left => (-1, 0),
+            Direction::Right => (1, 0),
         }
-    }
-
-    fn horizontal_direction(&self) -> Option<HorizontalDirection> {
-        match self {
-            Direction::Left => Some(HorizontalDirection::Left),
-            Direction::Right => Some(HorizontalDirection::Right),
-            _ => None,
-        }
-    }
-}
-
-impl VerticalDirection {
-    fn start_from(&self) -> usize {
-        match self {
-            VerticalDirection::Up => 0,
-            VerticalDirection::Down => (NUM_ROWS - 1).try_into().unwrap(),
-        }
-    }
-
-    fn delta(&self) -> isize {
-        match self {
-            VerticalDirection::Up => 1,
-            VerticalDirection::Down => -1,
-        }
-    }
-
-    fn next_row(&self, row: usize) -> usize {
-        (row as i32 + self.delta() as i32) as usize
-    }
-}
-
-impl HorizontalDirection {
-    fn start_from(&self) -> usize {
-        match self {
-            HorizontalDirection::Left => 0,
-            HorizontalDirection::Right => (NUM_COLUMNS - 1).try_into().unwrap(),
-        }
-    }
-
-    fn delta(&self) -> isize {
-        match self {
-            HorizontalDirection::Left => 1,
-            HorizontalDirection::Right => -1,
-        }
-    }
-
-    fn next_column(&self, column: usize) -> usize {
-        (column as i32 + self.delta() as i32) as usize
     }
 }
 
@@ -306,7 +214,7 @@ mod tests {
     // [x] Board initialization
     // [x] Moves
     // [x] Random tile after the move
-    // [ ] Merging two tiles
+    // [x] Merging two tiles
     // [ ] Merging two tiles when 3 tiles in row/column have the same value
     // [ ] Merging tiles when 4 tiles in row/column have the same value
     // [ ] Score when merging
