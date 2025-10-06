@@ -1,0 +1,41 @@
+import { Style, Colors } from "styles.slint";
+
+export struct TileData {
+    value: int,
+    row: int,
+    column: int,
+    just-appeared: bool,
+}
+
+export component Tile inherits Rectangle {
+    in property <TileData> tile-data;
+
+    // width: Style.tile-size;
+    // height: Style.tile-size;
+    width: 0px;
+    height: 0px;
+    border-radius: Style.corner-radius;
+    background: Colors.tile-color(tile-data.value);
+    x: tile-data.column * Style.tile-size + (tile-data.column + 1) * Style.margin;
+    y: tile-data.row * Style.tile-size + (tile-data.row + 1) * Style.margin;
+
+    animate x, y {
+        duration: 150ms;
+        easing: ease-in-out;
+    }
+
+    animate width, height { duration: 150ms; }
+
+    init => {
+        self.width = Style.tile-size;
+        self.height = Style.tile-size;
+    }
+
+    Text {
+        text: tile-data.value;
+        color: Colors.tile-font-color(tile-data.value);
+        font-size: Style.tile-font-size(tile-data.value);
+        font-family: Style.font-name;
+        font-weight: Style.font-weight;
+    }
+}

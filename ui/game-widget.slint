@@ -1,0 +1,62 @@
+import { Style, Colors } from "styles.slint";
+import { GameBoard } from "game-board.slint";
+
+component ScoreWidget inherits Rectangle {
+    width: Style.score-width;
+    height: Style.score-height;
+    background: Colors.score-background;
+    border-radius: Style.corner-radius;
+
+    VerticalLayout {
+        alignment: center;
+        spacing: 5px;
+
+        Text {
+            text: "SCORE";
+            horizontal-alignment: center;
+            font-size: 12px;
+            font-family: Style.font-name;
+            font-weight: Style.font-weight;
+            color: Colors.score-label;
+        }
+
+        Text {
+            text: "0";
+            horizontal-alignment: center;
+            font-size: 22px;
+            font-family: Style.font-name;
+            font-weight: Style.font-weight;
+            color: white;
+        }
+    }
+}
+
+component NewGameButton inherits Rectangle {
+    width: Style.new-game-button-width;
+    // height: Style.new-game-button-height;
+    height: Style.score-height;
+    background: Colors.button;
+    border-radius: Style.corner-radius;
+
+    Text {
+        text: "New game";
+        font-size: 18px;
+    }
+}
+
+export component GameWidget inherits Rectangle {
+    background: Colors.background;
+
+    VerticalLayout {
+        HorizontalLayout {
+            padding-bottom: 30px;
+            alignment: space-between;
+
+            NewGameButton { }
+
+            ScoreWidget { }
+        }
+
+        GameBoard { }
+    }
+}

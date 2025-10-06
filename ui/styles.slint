@@ -2,6 +2,12 @@ export global Style {
     out property <length> tile-size: 107px;
     out property <length> margin: 16px;
     out property <length> corner-radius: 8px;
+    out property <length> new-game-button-width: 180px;
+    out property <length> new-game-button-height: 60px;
+    out property <length> score-width: 197px;
+    out property <length> score-height: 82px;
+    out property <string> font-name: "Clear sans";
+    out property <int> font-weight: 600;
 
     public pure function tile-font-size(value: int) -> length {
         if (value >= 2 && value < 16) {
@@ -17,7 +23,11 @@ export global Style {
 }
 
 export global Colors {
-    out property <color> background: #bbada0;
+    out property <color> background: #faf8ef;
+    out property <color> button: #8f7a66;
+    out property <color> score-background: #bbada0;
+    out property <color> score-label: #ebe1d6;
+    out property <color> game-background: #bbada0;
     out property <color> empty-tile: #cdc1b4;
     out property <color> tile2: #EEE4DA;
     out property <color> tile4: #EDE0C8;
