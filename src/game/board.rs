@@ -446,4 +446,204 @@ mod tests {
             );
         }
     }
+
+    #[test]
+    fn merging_3_tiles() {
+        #[rustfmt::skip]
+        let configurations: [MergeConfiguration; _] = [
+            // Merge up
+            MergeConfiguration {
+                initial_tiles: [
+                    Value(2), Value(4), Value(8), Value(16),
+                    Value(2), Value(4), Value(8), Value(16),
+                    Value(2), Value(4), Value(8), Value(16),
+                    Empty,    Empty,    Empty,    Empty,
+                ],
+                direction: Direction::Up,
+                expected_tiles: [
+                    Value(4), Value(8), Value(16), Value(32),
+                    Value(2), Value(4), Value(8),  Value(16),
+                    Empty,    Empty,    Empty,     Empty,
+                    Empty,    Empty,    Empty,     Value(2),
+                ],
+                expected_score: 4 + 8 + 16 + 32,
+                new_tile_index: 15,
+            },
+            // Merge down
+            MergeConfiguration {
+                initial_tiles: [
+                    Empty,    Empty,    Empty,    Empty,
+                    Value(2), Value(4), Value(8), Value(16),
+                    Value(2), Value(4), Value(8), Value(16),
+                    Value(2), Value(4), Value(8), Value(16),
+                ],
+                direction: Direction::Down,
+                expected_tiles: [
+                    Empty,    Empty,    Empty,     Value(2),
+                    Empty,    Empty,    Empty,     Empty,
+                    Value(2), Value(4), Value(8),  Value(16),
+                    Value(4), Value(8), Value(16), Value(32),
+                ],
+                expected_score: 4 + 8 + 16 + 32,
+                new_tile_index: 3,
+            },
+            // Merge left
+            MergeConfiguration {
+                initial_tiles: [
+                    Value(2),  Value(2),  Value(2),  Empty,
+                    Value(4),  Value(4),  Value(4),  Empty,
+                    Value(8),  Value(8),  Value(8),  Empty,
+                    Value(16), Value(16), Value(16), Empty,
+                ],
+                direction: Direction::Left,
+                expected_tiles: [
+                    Value(4),  Value(2),  Empty, Empty,
+                    Value(8),  Value(4),  Empty, Empty,
+                    Value(16), Value(8),  Empty, Empty,
+                    Value(32), Value(16), Empty, Value(2),
+                ],
+                expected_score: 4 + 8 + 16 + 32,
+                new_tile_index: 15,
+            },
+            // Merge right
+            MergeConfiguration {
+                initial_tiles: [
+                    Empty, Value(2),  Value(2),  Value(2),  
+                    Empty, Value(4),  Value(4),  Value(4),  
+                    Empty, Value(8),  Value(8),  Value(8),  
+                    Empty, Value(16), Value(16), Value(16), 
+                ],
+                direction: Direction::Right,
+                expected_tiles: [
+                    Empty,    Empty, Value(2),  Value(4),  
+                    Empty,    Empty, Value(4),  Value(8),  
+                    Empty,    Empty, Value(8),  Value(16), 
+                    Value(2), Empty, Value(16), Value(32), 
+                ],
+                expected_score: 4 + 8 + 16 + 32,
+                new_tile_index: 12,
+            },
+        ];
+
+        for config in configurations {
+            let new_tile_index = || config.new_tile_index;
+            let mut board = Board::new_with_tiles(config.initial_tiles, || 2, new_tile_index);
+            match config.direction {
+                Direction::Up => board.move_up(),
+                Direction::Down => board.move_down(),
+                Direction::Left => board.move_left(),
+                Direction::Right => board.move_right(),
+            }
+            assert_eq!(
+                board.tiles, config.expected_tiles,
+                "Merge failed in direction {:?}",
+                config.direction
+            );
+            assert_eq!(
+                board.score, config.expected_score,
+                "Incorrect score after the merge in direction {:?}",
+                config.direction
+            );
+        }
+    }
+
+    #[test]
+    fn merging_4_tiles() {
+        #[rustfmt::skip]
+        let configurations: [MergeConfiguration; _] = [
+            // Merge up
+            MergeConfiguration {
+                initial_tiles: [
+                    Value(2), Value(4), Value(8), Value(16),
+                    Value(2), Value(4), Value(8), Value(16),
+                    Value(2), Value(4), Value(8), Value(16),
+                    Value(2), Value(4), Value(8), Value(16),
+                ],
+                direction: Direction::Up,
+                expected_tiles: [
+                    Value(4), Value(8), Value(16), Value(32),
+                    Value(4), Value(8), Value(16), Value(32),
+                    Empty,    Empty,    Empty,     Empty,
+                    Empty,    Empty,    Empty,     Value(2),
+                ],
+                expected_score: 2 * (4 + 8 + 16 + 32),
+                new_tile_index: 15,
+            },
+            // Merge down
+            MergeConfiguration {
+                initial_tiles: [
+                    Value(2), Value(4), Value(8), Value(16),
+                    Value(2), Value(4), Value(8), Value(16),
+                    Value(2), Value(4), Value(8), Value(16),
+                    Value(2), Value(4), Value(8), Value(16),
+                ],
+                direction: Direction::Down,
+                expected_tiles: [
+                    Empty,    Empty,    Empty,     Value(2),
+                    Empty,    Empty,    Empty,     Empty,
+                    Value(4), Value(8), Value(16), Value(32),
+                    Value(4), Value(8), Value(16), Value(32),
+                ],
+                expected_score: 2 * (4 + 8 + 16 + 32),
+                new_tile_index: 3,
+            },
+            // Merge left
+            MergeConfiguration {
+                initial_tiles: [
+                    Value(2),  Value(2),  Value(2),  Value(2),  
+                    Value(4),  Value(4),  Value(4),  Value(4),  
+                    Value(8),  Value(8),  Value(8),  Value(8),  
+                    Value(16), Value(16), Value(16), Value(16), 
+                ],
+                direction: Direction::Left,
+                expected_tiles: [
+                    Value(4),  Value(4),  Empty, Empty,
+                    Value(8),  Value(8),  Empty, Empty,
+                    Value(16), Value(16), Empty, Empty,
+                    Value(32), Value(32), Empty, Value(2),
+                ],
+                expected_score: 2 * (4 + 8 + 16 + 32),
+                new_tile_index: 15,
+            },
+            // Merge right
+            MergeConfiguration {
+                initial_tiles: [
+                    Value(2),  Value(2),  Value(2),  Value(2),  
+                    Value(4),  Value(4),  Value(4),  Value(4),  
+                    Value(8),  Value(8),  Value(8),  Value(8),  
+                    Value(16), Value(16), Value(16), Value(16), 
+                ],
+                direction: Direction::Right,
+                expected_tiles: [
+                    Empty,    Empty, Value(4),  Value(4),  
+                    Empty,    Empty, Value(8),  Value(8),  
+                    Empty,    Empty, Value(16), Value(16), 
+                    Value(2), Empty, Value(32), Value(32), 
+                ],
+                expected_score: 2 * (4 + 8 + 16 + 32),
+                new_tile_index: 12,
+            },
+        ];
+
+        for config in configurations {
+            let new_tile_index = || config.new_tile_index;
+            let mut board = Board::new_with_tiles(config.initial_tiles, || 2, new_tile_index);
+            match config.direction {
+                Direction::Up => board.move_up(),
+                Direction::Down => board.move_down(),
+                Direction::Left => board.move_left(),
+                Direction::Right => board.move_right(),
+            }
+            assert_eq!(
+                board.tiles, config.expected_tiles,
+                "Merge failed in direction {:?}",
+                config.direction
+            );
+            assert_eq!(
+                board.score, config.expected_score,
+                "Incorrect score after the merge in direction {:?}",
+                config.direction
+            );
+        }
+    }
 }
