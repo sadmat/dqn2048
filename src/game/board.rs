@@ -1,3 +1,4 @@
+use rand::distr::slice::Empty;
 use rand::prelude::*;
 use std::io;
 use std::io::Write;
@@ -180,6 +181,49 @@ where
             self.tiles[source_index] = Tile::Empty;
         }
     }
+
+    fn is_over(&self) -> bool {
+        let empty_tiles_exist = self
+            .tiles
+            .iter()
+            .filter(|tile| *tile == &Tile::Empty)
+            .count()
+            > 0;
+        if empty_tiles_exist {
+            return false;
+        }
+
+        for row in 0..NUM_ROWS {
+            for column in 0..NUM_COLUMNS {
+                let Tile::Value(tile_value) = self.tiles[index(row, column)] else {
+                    continue;
+                };
+
+                if let Some(right_value) = self.value_at(row, column + 1)
+                    && right_value == tile_value
+                {
+                    return false;
+                } else if let Some(bottom_value) = self.value_at(row + 1, column)
+                    && bottom_value == tile_value
+                {
+                    return false;
+                }
+            }
+        }
+
+        true
+    }
+
+    fn value_at(&self, row: usize, column: usize) -> Option<u32> {
+        if !(0..NUM_ROWS).contains(&row) || !(0..NUM_COLUMNS).contains(&column) {
+            return None;
+        }
+
+        match self.tiles[index(row, column)] {
+            Tile::Empty => None,
+            Tile::Value(value) => Some(value),
+        }
+    }
 }
 
 fn index(row: usize, column: usize) -> usize {
@@ -199,7 +243,7 @@ impl Direction {
 
 #[cfg(test)]
 mod tests {
-    use super::Tile::*;
+    use super::Tile::{Empty, Value};
     use super::*;
 
     struct MergeConfiguration {
@@ -209,16 +253,6 @@ mod tests {
         expected_score: u32,
         new_tile_index: usize,
     }
-
-    // Tests:
-    // [x] Board initialization
-    // [x] Moves
-    // [x] Random tile after the move
-    // [x] Merging two tiles
-    // [ ] Merging two tiles when 3 tiles in row/column have the same value
-    // [ ] Merging tiles when 4 tiles in row/column have the same value
-    // [ ] Score when merging
-    // [ ] Game over when board is filled and there is no move possible
 
     #[test]
     fn new_board_with_two_tiles() {
@@ -645,5 +679,35 @@ mod tests {
                 config.direction
             );
         }
+    }
+
+    #[test]
+    fn new_board_is_not_over() {
+        let board = Board::new();
+        assert_eq!(board.is_over(), false);
+    }
+
+    #[test]
+    fn full_board_with_no_possible_move_is_over() {
+        #[rustfmt::skip]
+        let board = Board::new_with_tiles([
+            Value(2), Value(4), Value(2), Value(4),
+            Value(4), Value(2), Value(4), Value(2),
+            Value(2), Value(4), Value(2), Value(4),
+            Value(4), Value(2), Value(4), Value(2),
+        ], || 2, || 2);
+        assert_eq!(board.is_over(), true);
+    }
+
+    #[test]
+    fn full_board_with_possible_moves_is_not_over() {
+        #[rustfmt::skip]
+        let board = Board::new_with_tiles([
+            Value(2), Value(4), Value(2), Value(4),
+            Value(2), Value(2), Value(4), Value(2),
+            Value(8), Value(4), Value(2), Value(8),
+            Value(4), Value(2), Value(4), Value(4),
+        ], || 2, || 2);
+        assert_eq!(board.is_over(), false);
     }
 }
