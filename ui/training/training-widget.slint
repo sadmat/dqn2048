@@ -1,0 +1,21 @@
+import { HorizontalBox } from "std-widgets.slint";
+import { Style, Colors } from "../styles.slint";
+
+export component TrainingWidget inherits Rectangle {
+    HorizontalBox {
+        Rectangle {
+            width: 600px;
+            height: 400px;
+            border-radius: Style.corner-radius;
+            background: Colors.game-background;
+
+            Text {
+                text: "[Plot placeholder]";
+                font-size: 24px;
+                font-family: Style.font-name;
+            }
+        }
+    }
+}
+
+component StatWidget inherits Rectangle { }
