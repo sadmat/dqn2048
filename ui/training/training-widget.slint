@@ -1,7 +1,30 @@
-import { HorizontalBox } from "std-widgets.slint";
+import { HorizontalBox, VerticalBox } from "std-widgets.slint";
 import { Style, Colors } from "../styles.slint";
 
+component StatWidget inherits Rectangle {
+    in property <string> name;
+    in property <string> value;
+
+    HorizontalBox {
+        alignment: space-between;
+
+        Text {
+            text: name;
+            color: gray;
+        }
+
+        Text {
+            text: value;
+        }
+    }
+}
+
 export component TrainingWidget inherits Rectangle {
+    in property <string> state;
+    in property <int> epoch;
+    in property <float> epochs-per-second;
+    in property <int> best-score;
+
     HorizontalBox {
         Rectangle {
             width: 600px;
@@ -15,7 +38,29 @@ export component TrainingWidget inherits Rectangle {
                 font-family: Style.font-name;
             }
         }
+
+        VerticalBox {
+            alignment: end;
+
+            StatWidget {
+                name: "state";
+                value: state;
+            }
+
+            StatWidget {
+                name: "epoch";
+                value: epoch;
+            }
+
+            StatWidget {
+                name: "epochs/s";
+                value: epochs-per-second;
+            }
+
+            StatWidget {
+                name: "best score";
+                value: best-score;
+            }
+        }
     }
 }
-
-component StatWidget inherits Rectangle { }

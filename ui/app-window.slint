@@ -1,11 +1,43 @@
 import { Button, VerticalBox, GridBox } from "std-widgets.slint";
-import { GameBoard } from "2048/game-board.slint";
+import { TrainingWidget } from "training/training-widget.slint";
 
 export component AppWindow inherits Window {
-    in-out property <int> counter: 42;
-    callback request-increase-value();
+    callback save-model;
+    callback load-model;
+    callback quit;
 
-    VerticalBox {
-        GameBoard { }
+    MenuBar {
+        Menu {
+            title: "file";
+            MenuItem {
+                title: "save model";
+                activated => {
+                    save-model();
+                }
+            }
+
+            MenuItem {
+                title: "load model";
+                activated => {
+                    load-model();
+                }
+            }
+
+            MenuSeparator { }
+
+            MenuItem {
+                title: "quit";
+                activated => {
+                    quit();
+                }
+            }
+        }
+    }
+
+    training-widget := TrainingWidget {
+        state: "idle";
+        epoch: 30000;
+        epochs-per-second: 100.0;
+        best-score: 128;
     }
 }
