@@ -1,10 +1,24 @@
 import { Button, VerticalBox, GridBox } from "std-widgets.slint";
-import { TrainingWidget } from "training/training-widget.slint";
+import {
+    TrainingWidget,
+    TrainingState,
+    Size,
+} from "training/training-widget.slint";
+
+export { Size }
 
 export component AppWindow inherits Window {
+
+    in property <TrainingState> training-state;
+    in property <int> current-epoch;
+    in property <float> epochs-per-second;
+    in property <int> best-score;
+    in property <image> plot-image;
+
     callback save-model;
     callback load-model;
     callback quit;
+    callback plot-size-changed(Size);
 
     MenuBar {
         Menu {
@@ -34,10 +48,16 @@ export component AppWindow inherits Window {
         }
     }
 
-    training-widget := TrainingWidget {
-        state: "idle";
-        epoch: 30000;
-        epochs-per-second: 100.0;
-        best-score: 128;
+    VerticalLayout {
+        training-widget := TrainingWidget {
+            state: training-state;
+            epoch: current-epoch;
+            epochs-per-second: epochs-per-second;
+            best-score: best-score;
+            plot: plot-image;
+            changed plot-size => {
+                plot-size-changed(self.plot-size);
+            }
+        }
     }
 }

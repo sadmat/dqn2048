@@ -5,18 +5,27 @@ mod game;
 
 use std::error::Error;
 
+use slint::quit_event_loop;
+
 slint::include_modules!();
 
 fn main() -> Result<(), Box<dyn Error>> {
     let ui = AppWindow::new()?;
 
-    ui.on_request_increase_value({
-        let ui_handle = ui.as_weak();
-        move || {
-            let ui = ui_handle.unwrap();
-            ui.set_counter(ui.get_counter() + 1);
-        }
+    ui.on_plot_size_changed(|size| {
+        println!("OMG! It works...?!!! {:?}", size);
     });
+
+    ui.on_quit(|| {
+        quit_event_loop().unwrap();
+    });
+    // ui.on_request_increase_value({
+    //     let ui_handle = ui.as_weak();
+    //     move || {
+    //         let ui = ui_handle.unwrap();
+    //         ui.set_counter(ui.get_counter() + 1);
+    //     }
+    // });
 
     ui.run()?;
 
