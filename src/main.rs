@@ -1,6 +1,7 @@
 // Prevent console window in addition to Slint window in Windows release builds when, e.g., starting the app via file manager. Ignored on other platforms.
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod dqn;
 mod game;
 
 use std::error::Error;
@@ -19,6 +20,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     ui.on_quit(|| {
         quit_event_loop().unwrap();
     });
+
     // ui.on_request_increase_value({
     //     let ui_handle = ui.as_weak();
     //     move || {
