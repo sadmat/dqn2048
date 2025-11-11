@@ -3,6 +3,7 @@
 
 mod dqn;
 mod game;
+mod training;
 
 use std::error::Error;
 

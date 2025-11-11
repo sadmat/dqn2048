@@ -23,7 +23,7 @@ impl<B: Backend, const N: usize, S: State<N>> From<Vec<&StateTransition<N, S>>>
         let batch_size = records.len();
         let mut states: Vec<f32> = Vec::with_capacity(batch_size * N);
         let mut actions: Vec<i32> = Vec::with_capacity(batch_size);
-        let mut invalid_actions_mask: Vec<bool> = Vec::with_capacity(batch_size * N);
+        let mut invalid_actions_mask: Vec<bool> = Vec::with_capacity(batch_size * S::num_actions());
         let mut rewards: Vec<f32> = Vec::with_capacity(batch_size);
         let mut next_states: Vec<f32> = Vec::with_capacity(batch_size * N);
         let mut is_terminal: Vec<f32> = Vec::with_capacity(batch_size);
@@ -45,12 +45,12 @@ impl<B: Backend, const N: usize, S: State<N>> From<Vec<&StateTransition<N, S>>>
             });
         }
 
-        let states = TensorData::new(states, [batch_size, S::num_actions()]);
+        let states = TensorData::new(states, [batch_size, N]);
         let actions = TensorData::new(actions, [batch_size]);
         let invalid_actions_mask =
             TensorData::new(invalid_actions_mask, [batch_size, S::num_actions()]);
         let rewards = TensorData::new(rewards, [batch_size]);
-        let next_states = TensorData::new(next_states, [batch_size, S::num_actions()]);
+        let next_states = TensorData::new(next_states, [batch_size, N]);
         let is_terminal = TensorData::new(is_terminal, [batch_size]);
         let device = B::Device::default();
 

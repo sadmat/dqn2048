@@ -7,6 +7,7 @@ pub(crate) trait GameRng {
     fn new_tile_position(&self) -> usize;
 }
 
+#[derive(Clone)]
 pub(crate) struct RealGameRng {}
 
 impl RealGameRng {

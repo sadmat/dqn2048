@@ -109,7 +109,7 @@ where
 
     fn pick_best_action(&self, state: &S, model: &M) -> S::Action {
         let features = state.as_features();
-        let data = TensorData::new(features.into(), S::features_shape());
+        let data = TensorData::new(features.into(), [1, features.len()]);
         let input = Tensor::<B::InnerBackend, 2>::from_data(data, &self.device);
         let output = model.valid().forward(input);
         let output: Vec<f32> = output.into_data().into_vec().unwrap();

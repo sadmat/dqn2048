@@ -20,6 +20,7 @@ pub(crate) const NUM_ROWS: usize = 4;
 pub(crate) const NUM_COLUMNS: usize = 4;
 pub(crate) const NUM_TILES: usize = NUM_ROWS * NUM_COLUMNS;
 
+#[derive(Clone)]
 pub(crate) struct Board<Rng: GameRng> {
     score: u32,
     tiles: [Tile; NUM_TILES],
@@ -159,7 +160,7 @@ impl<Rng: GameRng> Board<Rng> {
         }
     }
 
-    fn is_over(&self) -> bool {
+    pub fn is_over(&self) -> bool {
         let empty_tiles_exist = self
             .tiles
             .iter()
@@ -191,7 +192,7 @@ impl<Rng: GameRng> Board<Rng> {
         true
     }
 
-    fn value_at(&self, row: usize, column: usize) -> Option<u32> {
+    pub fn value_at(&self, row: usize, column: usize) -> Option<u32> {
         if !(0..NUM_ROWS).contains(&row) || !(0..NUM_COLUMNS).contains(&column) {
             return None;
         }

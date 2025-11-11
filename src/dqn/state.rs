@@ -7,7 +7,6 @@ pub trait State<const N: usize>: Clone {
 
     fn initial_state() -> Self;
     fn num_actions() -> usize;
-    fn features_shape() -> [usize; 2];
     fn possible_actions(&self) -> Vec<Self::Action>;
     fn advance(&self, action: &Self::Action) -> Self;
     fn is_terminal(&self) -> bool;
