@@ -1,5 +1,7 @@
 use rand::prelude::*;
 
+use crate::game::game_rng::{GameRng, RealGameRng};
+
 #[derive(Copy, Clone, PartialEq, Debug)]
 pub(crate) enum Tile {
     Empty,
@@ -14,37 +16,22 @@ pub(crate) enum Direction {
     Right,
 }
 
-const NUM_ROWS: usize = 4;
-const NUM_COLUMNS: usize = 4;
-const NUM_TILES: usize = NUM_ROWS * NUM_COLUMNS;
+pub(crate) const NUM_ROWS: usize = 4;
+pub(crate) const NUM_COLUMNS: usize = 4;
+pub(crate) const NUM_TILES: usize = NUM_ROWS * NUM_COLUMNS;
 
-pub(crate) struct Board<F1, F2>
-where
-    F1: FnMut() -> u32,
-    F2: FnMut() -> usize,
-{
+pub(crate) struct Board<Rng: GameRng> {
     score: u32,
     tiles: [Tile; NUM_TILES],
-    random_tile_value: F1,
-    random_index: F2,
+    rng: Rng,
 }
 
-impl Board<fn() -> u32, fn() -> usize> {
-    pub fn new() -> Board<impl FnMut() -> u32, impl FnMut() -> usize> {
-        let mut tile_rng = rand::rng();
-        let mut index_rng = rand::rng();
-
+impl Board<RealGameRng> {
+    pub fn new() -> Board<RealGameRng> {
         let mut board = Board {
             score: 0,
             tiles: [Tile::Empty; NUM_TILES],
-            random_tile_value: move || {
-                if tile_rng.random::<f64>() <= 0.1 {
-                    4
-                } else {
-                    2
-                }
-            },
-            random_index: move || index_rng.random_range(0..NUM_TILES),
+            rng: RealGameRng::new(),
         };
         board.place_random_tile();
         board.place_random_tile();
@@ -52,31 +39,24 @@ impl Board<fn() -> u32, fn() -> usize> {
     }
 }
 
-impl<F1, F2> Board<F1, F2>
-where
-    F1: FnMut() -> u32,
-    F2: FnMut() -> usize,
-{
+impl<Rng: GameRng> Board<Rng> {
     fn new_with_tiles(
         tiles: [Tile; NUM_TILES],
-        random_tile_value: F1,
-        random_index: F2,
-    ) -> Board<F1, F2> {
+        rng: Rng,
+    ) -> Board<Rng> {
         Board {
             score: 0,
             tiles: tiles,
-            random_tile_value: random_tile_value,
-            random_index: random_index,
+            rng: rng,
         }
     }
 
     fn place_random_tile(&mut self) {
         // TODO: check for full board
         loop {
-            let index = (self.random_index)();
-            println!("random tile index: {index}");
+            let index = self.rng.new_tile_position();
             if self.tiles[index] == Tile::Empty {
-                self.tiles[index] = Tile::Value((self.random_tile_value)());
+                self.tiles[index] = Tile::Value(self.rng.new_tile_value());
                 break;
             }
         }
@@ -240,6 +220,8 @@ impl Direction {
 
 #[cfg(test)]
 mod tests {
+    use crate::game::game_rng::FakeGameRng;
+
     use super::Tile::{Empty, Value};
     use super::*;
 
@@ -276,8 +258,8 @@ mod tests {
 
     #[test]
     fn move_right() {
-        let new_tile_value = || 2;
-        let new_tile_index = || 0;
+        let new_tile_value = 2;
+        let new_tile_index = 0;
 
         #[rustfmt::skip]
         let mut board = Board::new_with_tiles([
@@ -285,7 +267,7 @@ mod tests {
             Value(2), Value(4), Empty,    Empty,
             Value(2), Value(4), Value(8), Empty,
             Value(2), Value(4), Value(8), Value(16),
-        ], new_tile_value, new_tile_index);
+        ], FakeGameRng::new(new_tile_value, new_tile_index));
 
         #[rustfmt::skip]
         let expected_result: [Tile; _] = [
@@ -302,8 +284,8 @@ mod tests {
 
     #[test]
     fn move_left() {
-        let new_tile_value = || 2;
-        let new_tile_index = || 3;
+        let new_tile_value = 2;
+        let new_tile_index = 3;
 
         #[rustfmt::skip]
         let mut board = Board::new_with_tiles([
@@ -311,7 +293,7 @@ mod tests {
             Empty,    Empty,    Value(2), Value(4), 
             Empty,    Value(2), Value(4), Value(8),
             Value(2), Value(4), Value(8), Value(16),
-        ], new_tile_value, new_tile_index);
+        ], FakeGameRng::new(new_tile_value, new_tile_index));
 
         #[rustfmt::skip]
         let expected_result: [Tile; _] = [
@@ -328,8 +310,8 @@ mod tests {
 
     #[test]
     fn move_down() {
-        let new_tile_value = || 2;
-        let new_tile_index = || 0;
+        let new_tile_value = 2;
+        let new_tile_index = 0;
 
         #[rustfmt::skip]
         let mut board = Board::new_with_tiles([
@@ -337,7 +319,7 @@ mod tests {
             Empty,    Value(2), Value(4), Value(8),
             Empty,    Empty,    Value(2), Value(4), 
             Empty,    Empty,    Empty,    Value(2), 
-        ], new_tile_value, new_tile_index);
+        ], FakeGameRng::new(new_tile_value, new_tile_index));
 
         #[rustfmt::skip]
         let expected_result: [Tile; _] = [
@@ -354,8 +336,8 @@ mod tests {
 
     #[test]
     fn move_up() {
-        let new_tile_value = || 2;
-        let new_tile_index = || 12;
+        let new_tile_value = 2;
+        let new_tile_index = 12;
 
         #[rustfmt::skip]
         let mut board = Board::new_with_tiles([
@@ -363,7 +345,7 @@ mod tests {
             Empty,    Empty,    Value(8),  Value(8),
             Empty,    Value(4), Value(4),  Value(4), 
             Value(2), Value(2), Value(2),  Value(2), 
-        ], new_tile_value, new_tile_index);
+        ], FakeGameRng::new(new_tile_value, new_tile_index));
 
         #[rustfmt::skip]
         let expected_result: [Tile; _] = [
@@ -457,8 +439,7 @@ mod tests {
         ];
 
         for config in configurations {
-            let new_tile_index = || config.new_tile_index;
-            let mut board = Board::new_with_tiles(config.initial_tiles, || 2, new_tile_index);
+            let mut board = Board::new_with_tiles(config.initial_tiles, FakeGameRng::new(2, config.new_tile_index));
             match config.direction {
                 Direction::Up => board.move_up(),
                 Direction::Down => board.move_down(),
@@ -557,8 +538,7 @@ mod tests {
         ];
 
         for config in configurations {
-            let new_tile_index = || config.new_tile_index;
-            let mut board = Board::new_with_tiles(config.initial_tiles, || 2, new_tile_index);
+            let mut board = Board::new_with_tiles(config.initial_tiles, FakeGameRng::new(2, config.new_tile_index));
             match config.direction {
                 Direction::Up => board.move_up(),
                 Direction::Down => board.move_down(),
@@ -657,8 +637,7 @@ mod tests {
         ];
 
         for config in configurations {
-            let new_tile_index = || config.new_tile_index;
-            let mut board = Board::new_with_tiles(config.initial_tiles, || 2, new_tile_index);
+            let mut board = Board::new_with_tiles(config.initial_tiles, FakeGameRng::new(2, config.new_tile_index));
             match config.direction {
                 Direction::Up => board.move_up(),
                 Direction::Down => board.move_down(),
@@ -692,7 +671,7 @@ mod tests {
             Value(4), Value(2), Value(4), Value(2),
             Value(2), Value(4), Value(2), Value(4),
             Value(4), Value(2), Value(4), Value(2),
-        ], || 2, || 2);
+        ], FakeGameRng::new(2, 2));
         assert_eq!(board.is_over(), true);
     }
 
@@ -704,7 +683,7 @@ mod tests {
             Value(2), Value(2), Value(4), Value(2),
             Value(8), Value(4), Value(2), Value(8),
             Value(4), Value(2), Value(4), Value(4),
-        ], || 2, || 2);
+        ], FakeGameRng::new(2, 2));
         assert_eq!(board.is_over(), false);
     }
 }
