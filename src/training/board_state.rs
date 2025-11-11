@@ -17,7 +17,9 @@ impl ActionType for Direction {
     }
 }
 
-impl State<NUM_TILES> for Board<RealGameRng> {
+const NUM_FEATURES: usize = NUM_TILES * 11;
+
+impl State for Board<RealGameRng> {
     type Action = Direction;
 
     fn initial_state() -> Board<RealGameRng> {
@@ -26,6 +28,10 @@ impl State<NUM_TILES> for Board<RealGameRng> {
 
     fn num_actions() -> usize {
         4
+    }
+
+    fn num_features() -> usize {
+        NUM_FEATURES
     }
 
     fn possible_actions(&self) -> Vec<Self::Action> {
@@ -47,7 +53,29 @@ impl State<NUM_TILES> for Board<RealGameRng> {
         self.is_over()
     }
 
-    fn as_features(&self) -> [f32; NUM_TILES] {
-        todo!()
+    fn as_features(&self) -> Vec<f32> {
+        let mut features = Vec::with_capacity(NUM_FEATURES);
+        for row in 0..NUM_ROWS {
+            for column in 0..NUM_COLUMNS {
+                let tile_value = self.value_at(row, column).unwrap_or_default();
+                #[rustfmt::skip]
+                let inputs = match tile_value {
+                    2    => [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0],
+                    4    => [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0],
+                    8    => [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0],
+                    16   => [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0],
+                    32   => [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0],
+                    64   => [0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+                    128  => [0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+                    256  => [0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+                    512  => [0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+                    1024 => [0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+                    2048 => [1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+                    _    => [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+                };
+                features.extend_from_slice(inputs.as_slice());
+            }
+        }
+        features
     }
 }

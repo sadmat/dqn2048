@@ -22,30 +22,30 @@ pub(crate) struct Hyperparameters {
     pub batch_size: usize,
 }
 
-pub(crate) struct Trainer<B, M, const N: usize, S, R>
+pub(crate) struct Trainer<B, M, S, R>
 where
     B: AutodiffBackend,
     M: Model<B> + AutodiffModule<B>,
     M::InnerModule: Model<<B as AutodiffBackend>::InnerBackend>,
-    S: State<N>,
+    S: State,
     R: Fn(&S, &S::Action, &S) -> f32,
 {
     config: Hyperparameters,
     reward: R,
-    replay_buffer: ReplayBuffer<N, S>,
+    replay_buffer: ReplayBuffer<S>,
     optimizer: OptimizerAdaptor<Adam, M, B>,
     device: Device<B>,
 }
 
-impl<B, M, const N: usize, S, R> Trainer<B, M, N, S, R>
+impl<B, M, S, R> Trainer<B, M, S, R>
 where
     B: AutodiffBackend,
     M: Model<B> + AutodiffModule<B>,
     M::InnerModule: Model<<B as AutodiffBackend>::InnerBackend>,
-    S: State<N>,
+    S: State,
     R: Fn(&S, &S::Action, &S) -> f32,
 {
-    pub fn new(config: Hyperparameters, reward: R, device: Device<B>) -> Trainer<B, M, N, S, R> {
+    pub fn new(config: Hyperparameters, reward: R, device: Device<B>) -> Trainer<B, M, S, R> {
         Trainer {
             config,
             reward: reward,
@@ -109,7 +109,8 @@ where
 
     fn pick_best_action(&self, state: &S, model: &M) -> S::Action {
         let features = state.as_features();
-        let data = TensorData::new(features.into(), [1, features.len()]);
+        let num_features = features.len();
+        let data = TensorData::new(features.into(), [1, num_features]);
         let input = Tensor::<B::InnerBackend, 2>::from_data(data, &self.device);
         let output = model.valid().forward(input);
         let output: Vec<f32> = output.into_data().into_vec().unwrap();

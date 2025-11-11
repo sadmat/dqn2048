@@ -3,18 +3,18 @@ use rand::seq::IndexedRandom;
 
 use crate::dqn::{state::State, training_batch::TrainingBatch};
 
-pub struct ReplayBuffer<const N: usize, S: State<N>> {
-    transitions: Vec<StateTransition<N, S>>,
+pub struct ReplayBuffer<S: State> {
+    transitions: Vec<StateTransition<S>>,
 }
 
-impl<const N: usize, S: State<N>> ReplayBuffer<N, S> {
+impl<S: State> ReplayBuffer<S> {
     pub fn new() -> Self {
         ReplayBuffer {
             transitions: Vec::new(),
         }
     }
 
-    pub fn store(&mut self, transition: StateTransition<N, S>) {
+    pub fn store(&mut self, transition: StateTransition<S>) {
         self.transitions.push(transition);
     }
 
@@ -30,14 +30,14 @@ impl<const N: usize, S: State<N>> ReplayBuffer<N, S> {
     }
 }
 
-pub struct StateTransition<const N: usize, S: State<N>> {
+pub struct StateTransition<S: State> {
     pub state: S,
     pub action: S::Action,
     pub reward: f32,
     pub next_state: S,
 }
 
-impl<const N: usize, S: State<N>> StateTransition<N, S> {
+impl<S: State> StateTransition<S> {
     pub fn new(state: S, action: S::Action, reward: f32, next_state: S) -> Self {
         Self {
             state,

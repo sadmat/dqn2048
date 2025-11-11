@@ -16,16 +16,14 @@ pub struct TrainingBatch<B: Backend> {
     pub is_terminal: Tensor<B, 1, Float>,
 }
 
-impl<B: Backend, const N: usize, S: State<N>> From<Vec<&StateTransition<N, S>>>
-    for TrainingBatch<B>
-{
-    fn from(records: Vec<&StateTransition<N, S>>) -> Self {
+impl<B: Backend, S: State> From<Vec<&StateTransition<S>>> for TrainingBatch<B> {
+    fn from(records: Vec<&StateTransition<S>>) -> Self {
         let batch_size = records.len();
-        let mut states: Vec<f32> = Vec::with_capacity(batch_size * N);
+        let mut states: Vec<f32> = Vec::with_capacity(batch_size * S::num_features());
         let mut actions: Vec<i32> = Vec::with_capacity(batch_size);
         let mut invalid_actions_mask: Vec<bool> = Vec::with_capacity(batch_size * S::num_actions());
         let mut rewards: Vec<f32> = Vec::with_capacity(batch_size);
-        let mut next_states: Vec<f32> = Vec::with_capacity(batch_size * N);
+        let mut next_states: Vec<f32> = Vec::with_capacity(batch_size * S::num_features());
         let mut is_terminal: Vec<f32> = Vec::with_capacity(batch_size);
 
         for record in records {
@@ -45,12 +43,12 @@ impl<B: Backend, const N: usize, S: State<N>> From<Vec<&StateTransition<N, S>>>
             });
         }
 
-        let states = TensorData::new(states, [batch_size, N]);
+        let states = TensorData::new(states, [batch_size, S::num_features()]);
         let actions = TensorData::new(actions, [batch_size]);
         let invalid_actions_mask =
             TensorData::new(invalid_actions_mask, [batch_size, S::num_actions()]);
         let rewards = TensorData::new(rewards, [batch_size]);
-        let next_states = TensorData::new(next_states, [batch_size, N]);
+        let next_states = TensorData::new(next_states, [batch_size, S::num_features()]);
         let is_terminal = TensorData::new(is_terminal, [batch_size]);
         let device = B::Device::default();
 
