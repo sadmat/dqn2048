@@ -35,7 +35,22 @@ impl State for Board<RealGameRng> {
     }
 
     fn possible_actions(&self) -> Vec<Self::Action> {
-        todo!()
+        let mut actions = Vec::with_capacity(Self::num_actions());
+
+        if self.can_move_up() {
+            actions.push(Direction::Up);
+        }
+        if self.can_move_down() {
+            actions.push(Direction::Down);
+        }
+        if self.can_move_left() {
+            actions.push(Direction::Left);
+        }
+        if self.can_move_right() {
+            actions.push(Direction::Right);
+        }
+
+        actions
     }
 
     fn advance(&self, action: &Self::Action) -> Self {
