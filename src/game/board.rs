@@ -41,10 +41,7 @@ impl Board<RealGameRng> {
 }
 
 impl<Rng: GameRng> Board<Rng> {
-    fn new_with_tiles(
-        tiles: [Tile; NUM_TILES],
-        rng: Rng,
-    ) -> Board<Rng> {
+    fn new_with_tiles(tiles: [Tile; NUM_TILES], rng: Rng) -> Board<Rng> {
         Board {
             score: 0,
             tiles: tiles,
@@ -64,6 +61,9 @@ impl<Rng: GameRng> Board<Rng> {
     }
 
     pub fn move_right(&mut self) {
+        if !self.can_move_right() {
+            return;
+        }
         let mut merged_tiles = [false; NUM_TILES];
         for column in (0..NUM_COLUMNS - 1).rev() {
             for row in 0..NUM_ROWS {
@@ -74,6 +74,9 @@ impl<Rng: GameRng> Board<Rng> {
     }
 
     pub fn move_left(&mut self) {
+        if !self.can_move_left() {
+            return;
+        }
         let mut merged_tiles = [false; NUM_TILES];
         for column in 1..NUM_COLUMNS {
             for row in 0..NUM_ROWS {
@@ -84,6 +87,9 @@ impl<Rng: GameRng> Board<Rng> {
     }
 
     pub fn move_down(&mut self) {
+        if !self.can_move_down() {
+            return;
+        }
         let mut merged_tiles = [false; NUM_TILES];
         for row in (0..NUM_ROWS - 1).rev() {
             for column in 0..NUM_COLUMNS {
@@ -94,6 +100,9 @@ impl<Rng: GameRng> Board<Rng> {
     }
 
     pub fn move_up(&mut self) {
+        if !self.can_move_up() {
+            return;
+        }
         let mut merged_tiles = [false; NUM_TILES];
         for row in 1..NUM_ROWS {
             for column in 0..NUM_COLUMNS {
@@ -202,6 +211,68 @@ impl<Rng: GameRng> Board<Rng> {
             Tile::Value(value) => Some(value),
         }
     }
+
+    pub fn can_move_up(&self) -> bool {
+        for row in 1..NUM_ROWS {
+            for column in 0..NUM_COLUMNS {
+                if self.can_move_tile_at(row, column, Direction::Up) {
+                    return true;
+                }
+            }
+        }
+        false
+    }
+
+    pub fn can_move_down(&self) -> bool {
+        for row in 0..NUM_ROWS - 1 {
+            for column in 0..NUM_COLUMNS {
+                if self.can_move_tile_at(row, column, Direction::Down) {
+                    return true;
+                }
+            }
+        }
+        false
+    }
+
+    pub fn can_move_left(&self) -> bool {
+        for row in 0..NUM_ROWS {
+            for column in 1..NUM_COLUMNS {
+                if self.can_move_tile_at(row, column, Direction::Left) {
+                    return true;
+                }
+            }
+        }
+        false
+    }
+
+    pub fn can_move_right(&self) -> bool {
+        for row in 0..NUM_ROWS {
+            for column in 0..NUM_COLUMNS - 1 {
+                if self.can_move_tile_at(row, column, Direction::Right) {
+                    return true;
+                }
+            }
+        }
+        false
+    }
+
+    fn can_move_tile_at(&self, row: usize, column: usize, direction: Direction) -> bool {
+        let Some(tile_value) = self.value_at(row, column) else {
+            return false;
+        };
+
+        let (dx, dy) = direction.vector();
+        let next_tile_row = (row as isize + dy) as usize;
+        let next_tile_column = (column as isize + dx) as usize;
+
+        match self.value_at(next_tile_row, next_tile_column) {
+            Some(next_tile_value) => next_tile_value == tile_value,
+            None => {
+                (0..NUM_ROWS).contains(&next_tile_row)
+                    && (0..NUM_COLUMNS).contains(&next_tile_column)
+            }
+        }
+    }
 }
 
 fn index(row: usize, column: usize) -> usize {
@@ -221,6 +292,8 @@ impl Direction {
 
 #[cfg(test)]
 mod tests {
+    use std::iter::Zip;
+
     use crate::game::game_rng::FakeGameRng;
 
     use super::Tile::{Empty, Value};
@@ -440,7 +513,10 @@ mod tests {
         ];
 
         for config in configurations {
-            let mut board = Board::new_with_tiles(config.initial_tiles, FakeGameRng::new(2, config.new_tile_index));
+            let mut board = Board::new_with_tiles(
+                config.initial_tiles,
+                FakeGameRng::new(2, config.new_tile_index),
+            );
             match config.direction {
                 Direction::Up => board.move_up(),
                 Direction::Down => board.move_down(),
@@ -539,7 +615,10 @@ mod tests {
         ];
 
         for config in configurations {
-            let mut board = Board::new_with_tiles(config.initial_tiles, FakeGameRng::new(2, config.new_tile_index));
+            let mut board = Board::new_with_tiles(
+                config.initial_tiles,
+                FakeGameRng::new(2, config.new_tile_index),
+            );
             match config.direction {
                 Direction::Up => board.move_up(),
                 Direction::Down => board.move_down(),
@@ -638,7 +717,10 @@ mod tests {
         ];
 
         for config in configurations {
-            let mut board = Board::new_with_tiles(config.initial_tiles, FakeGameRng::new(2, config.new_tile_index));
+            let mut board = Board::new_with_tiles(
+                config.initial_tiles,
+                FakeGameRng::new(2, config.new_tile_index),
+            );
             match config.direction {
                 Direction::Up => board.move_up(),
                 Direction::Down => board.move_down(),
@@ -686,5 +768,145 @@ mod tests {
             Value(4), Value(2), Value(4), Value(4),
         ], FakeGameRng::new(2, 2));
         assert_eq!(board.is_over(), false);
+    }
+
+    #[test]
+    fn can_move_up() {
+        #[rustfmt::skip]
+        let configurations: Vec<[Tile; NUM_TILES]> = vec![
+            [
+                Value(2), Empty, Empty, Empty,
+                Empty,    Empty, Empty, Empty,
+                Empty,    Empty, Empty, Empty,
+                Empty,    Empty, Empty, Empty,
+            ], [
+                Empty,    Empty, Empty, Empty,
+                Value(2), Empty, Empty, Empty,
+                Empty,    Empty, Empty, Empty,
+                Empty,    Empty, Empty, Empty,
+            ], [
+                Value(2), Empty, Empty, Empty,
+                Value(2), Empty, Empty, Empty,
+                Empty,    Empty, Empty, Empty,
+                Empty,    Empty, Empty, Empty,
+            ],
+        ];
+
+        let expected_results = vec![false, true, true];
+
+        for (index, example) in configurations.into_iter().zip(expected_results).enumerate() {
+            let board = Board::new_with_tiles(example.0, FakeGameRng::new(2, 2));
+            assert_eq!(
+                board.can_move_up(),
+                example.1,
+                "Test failed for configuration {}",
+                index + 1
+            );
+        }
+    }
+
+    #[test]
+    fn can_move_down() {
+        #[rustfmt::skip]
+        let configurations: Vec<[Tile; NUM_TILES]> = vec![
+            [
+                Empty,    Empty, Empty, Empty,
+                Empty,    Empty, Empty, Empty,
+                Empty,    Empty, Empty, Empty,
+                Value(2), Empty, Empty, Empty,
+            ], [
+                Empty,    Empty, Empty, Empty,
+                Empty,    Empty, Empty, Empty,
+                Value(2), Empty, Empty, Empty,
+                Empty,    Empty, Empty, Empty,
+            ], [
+                Empty,    Empty, Empty, Empty,
+                Empty,    Empty, Empty, Empty,
+                Value(2), Empty, Empty, Empty,
+                Value(2), Empty, Empty, Empty,
+            ],
+        ];
+
+        let expected_results = vec![false, true, true];
+
+        for (index, example) in configurations.into_iter().zip(expected_results).enumerate() {
+            let board = Board::new_with_tiles(example.0, FakeGameRng::new(2, 2));
+            assert_eq!(
+                board.can_move_down(),
+                example.1,
+                "Test failed for configuration {}",
+                index + 1
+            );
+        }
+    }
+
+    #[test]
+    fn can_move_left() {
+        #[rustfmt::skip]
+        let configurations: Vec<[Tile; NUM_TILES]> = vec![
+            [
+                Value(2), Empty, Empty, Empty,
+                Empty,    Empty, Empty, Empty,
+                Empty,    Empty, Empty, Empty,
+                Empty,    Empty, Empty, Empty,
+            ], [
+                Empty, Value(2), Empty, Empty,
+                Empty, Empty,    Empty, Empty,
+                Empty, Empty,    Empty, Empty,
+                Empty, Empty,    Empty, Empty,
+            ], [
+                Value(2), Value(2), Empty, Empty,
+                Empty,    Empty,    Empty, Empty,
+                Empty,    Empty,    Empty, Empty,
+                Empty,    Empty,    Empty, Empty,
+            ],
+        ];
+
+        let expected_results = vec![false, true, true];
+
+        for (index, example) in configurations.into_iter().zip(expected_results).enumerate() {
+            let board = Board::new_with_tiles(example.0, FakeGameRng::new(2, 2));
+            assert_eq!(
+                board.can_move_left(),
+                example.1,
+                "Test failed for configuration {}",
+                index + 1
+            );
+        }
+    }
+
+    #[test]
+    fn can_move_right() {
+        #[rustfmt::skip]
+        let configurations: Vec<[Tile; NUM_TILES]> = vec![
+            [
+                Empty, Empty, Empty, Value(2),
+                Empty, Empty, Empty, Empty,
+                Empty, Empty, Empty, Empty,
+                Empty, Empty, Empty, Empty,
+            ], [
+                Empty, Empty, Value(2), Empty,
+                Empty, Empty, Empty,    Empty,
+                Empty, Empty, Empty,    Empty,
+                Empty, Empty, Empty,    Empty,
+            ], [
+                Empty, Empty, Value(2), Value(2),
+                Empty, Empty, Empty,    Empty,
+                Empty, Empty, Empty,    Empty,
+                Empty, Empty, Empty,    Empty,
+            ],
+        ];
+
+        let expected_results = vec![false, true, true];
+
+        for (index, example) in configurations.into_iter().zip(expected_results).enumerate() {
+            let board = Board::new_with_tiles(example.0, FakeGameRng::new(2, 2));
+            assert_eq!(
+                board.can_move_right(),
+                example.1,
+                "Test failed for configuration {}",
+                index + 1
+            );
+        }
     }
 }
