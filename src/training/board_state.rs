@@ -69,6 +69,7 @@ impl StateType for Board<RealGameRng> {
     }
 
     fn as_features(&self) -> Vec<f32> {
+        // TODO: one_hot tensor?
         let mut features = Vec::with_capacity(NUM_FEATURES);
         for row in 0..NUM_ROWS {
             for column in 0..NUM_COLUMNS {
