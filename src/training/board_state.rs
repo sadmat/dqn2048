@@ -1,5 +1,5 @@
 use crate::{
-    dqn::state::{ActionType, State},
+    dqn::state::{ActionType, StateType},
     game::{
         board::{Board, Direction, NUM_COLUMNS, NUM_ROWS, NUM_TILES},
         game_rng::RealGameRng,
@@ -19,7 +19,7 @@ impl ActionType for Direction {
 
 const NUM_FEATURES: usize = NUM_TILES * 11;
 
-impl State for Board<RealGameRng> {
+impl StateType for Board<RealGameRng> {
     type Action = Direction;
 
     fn initial_state() -> Board<RealGameRng> {

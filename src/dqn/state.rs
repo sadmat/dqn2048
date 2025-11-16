@@ -2,7 +2,7 @@ pub trait ActionType: Clone {
     fn index(&self) -> usize;
 }
 
-pub trait State: Clone {
+pub trait StateType: Clone {
     type Action: ActionType;
 
     fn initial_state() -> Self;

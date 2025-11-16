@@ -1,3 +1,4 @@
+pub(crate) mod critic;
 pub(crate) mod model;
 pub(crate) mod replay_buffer;
 pub(crate) mod state;

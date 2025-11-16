@@ -1,5 +1,5 @@
 use crate::dqn::state::ActionType;
-use crate::dqn::{replay_buffer::StateTransition, state::State};
+use crate::dqn::{replay_buffer::StateTransition, state::StateType};
 use burn::prelude::TensorData;
 use burn::{
     Tensor,
@@ -16,7 +16,7 @@ pub struct TrainingBatch<B: Backend> {
     pub is_terminal: Tensor<B, 1, Float>,
 }
 
-impl<B: Backend, S: State> From<Vec<&StateTransition<S>>> for TrainingBatch<B> {
+impl<B: Backend, S: StateType> From<Vec<&StateTransition<S>>> for TrainingBatch<B> {
     fn from(records: Vec<&StateTransition<S>>) -> Self {
         let batch_size = records.len();
         let mut states: Vec<f32> = Vec::with_capacity(batch_size * S::num_features());

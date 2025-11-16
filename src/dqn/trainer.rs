@@ -10,9 +10,10 @@ use burn::{
 use rand::{distr::uniform::SampleRange, rng, rngs::ThreadRng, seq::IndexedRandom, thread_rng};
 
 use crate::dqn::{
+    critic::CriticType,
     model::Model,
     replay_buffer::{ReplayBuffer, StateTransition},
-    state::{ActionType, State},
+    state::{ActionType, StateType},
 };
 
 pub(crate) struct Hyperparameters {
@@ -22,33 +23,33 @@ pub(crate) struct Hyperparameters {
     pub batch_size: usize,
 }
 
-pub(crate) struct Trainer<B, M, S, R>
+pub(crate) struct Trainer<B, M, S, C>
 where
     B: AutodiffBackend,
     M: Model<B> + AutodiffModule<B>,
     M::InnerModule: Model<<B as AutodiffBackend>::InnerBackend>,
-    S: State,
-    R: Fn(&S, &S::Action, &S) -> f32,
+    S: StateType,
+    C: CriticType<State = S>,
 {
     config: Hyperparameters,
-    reward: R,
+    critic: C,
     replay_buffer: ReplayBuffer<S>,
     optimizer: OptimizerAdaptor<Adam, M, B>,
     device: Device<B>,
 }
 
-impl<B, M, S, R> Trainer<B, M, S, R>
+impl<B, M, S, C> Trainer<B, M, S, C>
 where
     B: AutodiffBackend,
     M: Model<B> + AutodiffModule<B>,
     M::InnerModule: Model<<B as AutodiffBackend>::InnerBackend>,
-    S: State,
-    R: Fn(&S, &S::Action, &S) -> f32,
+    S: StateType,
+    C: CriticType<State = S>,
 {
-    pub fn new(config: Hyperparameters, reward: R, device: Device<B>) -> Trainer<B, M, S, R> {
+    pub fn new(config: Hyperparameters, critic: C, device: Device<B>) -> Trainer<B, M, S, C> {
         Trainer {
             config,
-            reward: reward,
+            critic: critic,
             replay_buffer: ReplayBuffer::new(),
             optimizer: AdamConfig::new().init(),
             device: device,
@@ -62,7 +63,7 @@ where
         while !state.is_terminal() {
             let action = self.pick_action(&state, &model);
             let next_state = state.advance(&action);
-            let reward = (self.reward)(&state, &action, &next_state);
+            let reward = self.critic.reward(&state, &action, &next_state);
             let transition = StateTransition::new(state, action, reward, next_state.clone());
             self.replay_buffer.store(transition);
             state = next_state;

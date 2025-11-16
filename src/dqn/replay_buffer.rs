@@ -1,13 +1,13 @@
 use burn::prelude::Backend;
 use rand::seq::IndexedRandom;
 
-use crate::dqn::{state::State, training_batch::TrainingBatch};
+use crate::dqn::{state::StateType, training_batch::TrainingBatch};
 
-pub struct ReplayBuffer<S: State> {
+pub struct ReplayBuffer<S: StateType> {
     transitions: Vec<StateTransition<S>>,
 }
 
-impl<S: State> ReplayBuffer<S> {
+impl<S: StateType> ReplayBuffer<S> {
     pub fn new() -> Self {
         ReplayBuffer {
             transitions: Vec::new(),
@@ -30,14 +30,14 @@ impl<S: State> ReplayBuffer<S> {
     }
 }
 
-pub struct StateTransition<S: State> {
+pub struct StateTransition<S: StateType> {
     pub state: S,
     pub action: S::Action,
     pub reward: f32,
     pub next_state: S,
 }
 
-impl<S: State> StateTransition<S> {
+impl<S: StateType> StateTransition<S> {
     pub fn new(state: S, action: S::Action, reward: f32, next_state: S) -> Self {
         Self {
             state,
