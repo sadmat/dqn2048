@@ -22,7 +22,7 @@ pub(crate) struct GameModelConfig {
 }
 
 impl GameModelConfig {
-    fn init<B: Backend>(&self, device: &B::Device) -> GameModel<B> {
+    pub(crate) fn init<B: Backend>(&self, device: &B::Device) -> GameModel<B> {
         GameModel {
             hidden1: LinearConfig::new(self.num_inputs, self.hidden1_size).init(device),
             relu1: Relu::new(),

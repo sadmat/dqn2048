@@ -23,6 +23,17 @@ pub(crate) struct Hyperparameters {
     pub batch_size: usize,
 }
 
+impl Hyperparameters {
+    pub(crate) fn new() -> Self {
+        Hyperparameters {
+            learning_rate: 0.1,
+            discount_factor: 0.99,
+            exploration_rate: 0.1,
+            batch_size: 32,
+        }
+    }
+}
+
 pub(crate) struct Trainer<B, M, S, C>
 where
     B: AutodiffBackend,

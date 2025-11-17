@@ -5,6 +5,12 @@ use crate::{
 
 pub(crate) struct TrainingCritic {}
 
+impl TrainingCritic {
+    pub(crate) fn new() -> Self {
+        TrainingCritic {}
+    }
+}
+
 impl CriticType for TrainingCritic {
     type State = Board<RealGameRng>;
 

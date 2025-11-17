@@ -1,3 +1,4 @@
+#[derive(PartialEq)]
 pub(crate) enum TrainingState {
     Idle,
     Training,

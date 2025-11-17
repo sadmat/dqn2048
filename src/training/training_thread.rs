@@ -1,5 +1,8 @@
+use std::sync::mpsc;
 use std::sync::mpsc::{Receiver, Sender};
-
+use std::thread;
+use std::thread::JoinHandle;
+use std::time::Duration;
 use burn::{
     Tensor,
     module::Module,
@@ -7,18 +10,68 @@ use burn::{
     tensor::backend::AutodiffBackend,
 };
 
-use crate::{
-    dqn::{critic::CriticType, model::Model, trainer::Trainer},
-    game::{board::Board, game_rng::RealGameRng},
-    training::{
-        game_model::GameModel,
-        training_critic::TrainingCritic,
-        types::{TrainingAction, TrainingMessage},
-    },
-};
+use crate::{dqn::{
+    critic::CriticType,
+    model::Model,
+    trainer::{Hyperparameters, Trainer},
+}, game::{board::Board, game_rng::RealGameRng}, training::{
+    game_model::GameModel,
+    training_critic::TrainingCritic,
+    types::{TrainingState, TrainingAction, TrainingMessage},
+}};
+use crate::training::game_model::GameModelConfig;
 
-struct TrainingThread<B: AutodiffBackend> {
+pub(crate) struct TrainingThread<B: AutodiffBackend> {
     actions: Receiver<TrainingAction>,
     messages: Sender<TrainingMessage>,
     trainer: Trainer<B, GameModel<B>, Board<RealGameRng>, TrainingCritic>,
+    training_state: TrainingState,
+}
+
+impl<B: AutodiffBackend> TrainingThread<B> {
+
+    pub(crate) fn spawn_thread() -> (Sender<TrainingAction>, Receiver<TrainingMessage>, JoinHandle<()>) {
+        let (action_tx, action_rx) = mpsc::channel();
+        let (message_tx, message_rx) = mpsc::channel();
+        let mut thread = TrainingThread::<B>::new(action_rx, message_tx);
+
+        let handle = thread::spawn(move || {
+            thread.execute();
+        });
+
+        (action_tx, message_rx, handle)
+    }
+
+    fn new(
+        actions: Receiver<TrainingAction>,
+        messages: Sender<TrainingMessage>,
+    ) -> TrainingThread<B> {
+        let hyperparams = Hyperparameters::new();
+
+        TrainingThread {
+            actions,
+            messages,
+            trainer: Trainer::new(hyperparams, TrainingCritic::new(), Default::default()),
+            training_state: TrainingState::Idle,
+        }
+    }
+
+    fn execute(&mut self) {
+        let mut model = GameModelConfig::new().init(&Default::default());
+
+        loop {
+            self.handle_action();
+            if self.training_state == TrainingState::Training {
+                model = self.trainer.run_epoch(model);
+                // TODO: report progress
+                // TODO: validation run?
+            } else {
+                thread::sleep(Duration::from_millis(200));
+            }
+        }
+    }
+
+    fn handle_action(&mut self) {
+
+    }
 }
