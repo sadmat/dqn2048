@@ -22,7 +22,7 @@ pub(crate) const NUM_TILES: usize = NUM_ROWS * NUM_COLUMNS;
 
 #[derive(Clone)]
 pub(crate) struct Board<Rng: GameRng> {
-    score: u32,
+    pub(crate) score: u32,
     tiles: [Tile; NUM_TILES],
     rng: Rng,
 }
