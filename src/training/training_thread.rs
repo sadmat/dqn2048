@@ -1,5 +1,5 @@
 use std::sync::mpsc;
-use std::sync::mpsc::{Receiver, Sender};
+use std::sync::mpsc::{Receiver, Sender, TryRecvError};
 use std::thread;
 use std::thread::JoinHandle;
 use std::time::Duration;
@@ -72,6 +72,15 @@ impl<B: AutodiffBackend> TrainingThread<B> {
     }
 
     fn handle_action(&mut self) {
-
+        match self.actions.try_recv() {
+            Ok(action) => {
+                match action {
+                    TrainingAction::Pause => self.training_state = TrainingState::Idle,
+                    TrainingAction::Start => self.training_state = TrainingState::Training,
+                }
+            },
+            Err(TryRecvError::Empty) => (),
+            Err(TryRecvError::Disconnected) => panic!("Training thread disconnected"),
+        }
     }
 }
