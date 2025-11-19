@@ -20,11 +20,12 @@ use crate::{dqn::{
     types::{TrainingState, TrainingAction, TrainingMessage},
 }};
 use crate::training::game_model::GameModelConfig;
+use crate::training::training_stats_recorder::TrainingStatsRecorder;
 
 pub(crate) struct TrainingThread<B: AutodiffBackend> {
     actions: Receiver<TrainingAction>,
     messages: Sender<TrainingMessage>,
-    trainer: Trainer<B, GameModel<B>, Board<RealGameRng>, TrainingCritic>,
+    trainer: Trainer<B, GameModel<B>, Board<RealGameRng>, TrainingCritic, TrainingStatsRecorder>,
     training_state: TrainingState,
 }
 
@@ -62,7 +63,8 @@ impl<B: AutodiffBackend> TrainingThread<B> {
         loop {
             self.handle_action();
             if self.training_state == TrainingState::Training {
-                model = self.trainer.run_epoch(model);
+                let (updated_model, stats) = self.trainer.run_epoch(model);
+                model = updated_model;
                 // TODO: report progress
                 // TODO: validation run?
             } else {

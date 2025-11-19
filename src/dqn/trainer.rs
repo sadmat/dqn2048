@@ -1,3 +1,4 @@
+use std::default::Default;
 use std::{cmp::Ordering, f32::NEG_INFINITY};
 
 use burn::{
@@ -15,6 +16,7 @@ use crate::dqn::{
     replay_buffer::{ReplayBuffer, StateTransition},
     state::{ActionType, StateType},
 };
+use crate::dqn::stats::StatsRecorderType;
 
 pub(crate) struct Hyperparameters {
     pub learning_rate: f32,
@@ -34,43 +36,48 @@ impl Hyperparameters {
     }
 }
 
-pub(crate) struct Trainer<B, M, S, C>
+pub(crate) struct Trainer<B, M, S, C, R>
 where
     B: AutodiffBackend,
     M: Model<B> + AutodiffModule<B>,
     M::InnerModule: Model<<B as AutodiffBackend>::InnerBackend>,
     S: StateType,
     C: CriticType<State = S>,
+    R: StatsRecorderType<State = S>,
 {
     config: Hyperparameters,
     critic: C,
     replay_buffer: ReplayBuffer<S>,
     optimizer: OptimizerAdaptor<Adam, M, B>,
     device: Device<B>,
+    stats_recorder: R,
 }
 
-impl<B, M, S, C> Trainer<B, M, S, C>
+impl<B, M, S, C, R> Trainer<B, M, S, C, R>
 where
     B: AutodiffBackend,
     M: Model<B> + AutodiffModule<B>,
     M::InnerModule: Model<<B as AutodiffBackend>::InnerBackend>,
     S: StateType,
     C: CriticType<State = S>,
+    R: StatsRecorderType<State = S>,
 {
-    pub fn new(config: Hyperparameters, critic: C, device: Device<B>) -> Trainer<B, M, S, C> {
+    pub fn new(config: Hyperparameters, critic: C, device: Device<B>) -> Trainer<B, M, S, C, R> {
         Trainer {
             config,
             critic: critic,
             replay_buffer: ReplayBuffer::new(),
             optimizer: AdamConfig::new().init(),
             device: device,
+            stats_recorder: Default::default(),
         }
     }
 
-    pub fn run_epoch(&mut self, model: M) -> M {
+    pub fn run_epoch(&mut self, model: M) -> (M, R::Stats) {
         let huber_loss = HuberLossConfig::new(1.0).init();
         let mut state = S::initial_state();
 
+        self.stats_recorder.record_new_epoch();
         while !state.is_terminal() {
             let action = self.pick_action(&state, &model);
             let next_state = state.advance(&action);
@@ -78,10 +85,12 @@ where
             let transition = StateTransition::new(state, action, reward, next_state.clone());
             self.replay_buffer.store(transition);
             state = next_state;
+            self.stats_recorder.record_reward(reward);
         }
+        self.stats_recorder.record_final_state(&state);
 
         if self.replay_buffer.size() < self.config.batch_size {
-            return model;
+            return (model, self.stats_recorder.stats());
         }
 
         let batch = self.replay_buffer.sample(self.config.batch_size);
@@ -102,8 +111,11 @@ where
         let grads = loss.backward();
         let grads = GradientsParams::from_grads(grads, &model);
 
-        self.optimizer
-            .step(self.config.learning_rate as f64, model, grads)
+        let model = self.optimizer
+            .step(self.config.learning_rate as f64, model, grads);
+        let stats = self.stats_recorder.stats();
+
+        (model, stats)
     }
 
     fn pick_action(&self, state: &S, model: &M) -> S::Action {
