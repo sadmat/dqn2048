@@ -1,3 +1,5 @@
+use crate::training::training_stats_recorder::TrainingStats;
+
 #[derive(PartialEq)]
 pub(crate) enum TrainingState {
     Idle,
@@ -11,12 +13,6 @@ pub(crate) enum TrainingAction {
 
 pub(crate) enum TrainingMessage {
     StateChanged(TrainingState),
-    EpochFinished(EpochStats),
+    EpochFinished(TrainingStats),
 }
 
-pub(crate) struct EpochStats {
-    pub epoch_score: u32,
-    pub highest_tile_value: u32,
-    pub current_epoch: u32,
-    pub epochs_per_second: f32,
-}
