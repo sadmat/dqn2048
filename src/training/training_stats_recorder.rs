@@ -3,6 +3,7 @@ use crate::dqn::stats::StatsRecorderType;
 use crate::game::board::{Board, NUM_COLUMNS, NUM_ROWS};
 use crate::game::game_rng::RealGameRng;
 
+#[derive(Debug)]
 pub(crate) struct TrainingStats {
     pub epochs: usize,
     pub epochs_per_second: Option<f32>,

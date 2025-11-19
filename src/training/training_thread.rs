@@ -76,6 +76,7 @@ impl<B: AutodiffBackend> TrainingThread<B> {
     fn handle_action(&mut self) {
         match self.actions.try_recv() {
             Ok(action) => {
+                println!("Training thread received action {:?}", action);
                 match action {
                     TrainingAction::Pause => self.training_state = TrainingState::Idle,
                     TrainingAction::Start => self.training_state = TrainingState::Training,

@@ -6,8 +6,10 @@ mod game;
 mod training;
 
 use std::error::Error;
-
+use burn::backend::{Autodiff, Rocm};
 use slint::quit_event_loop;
+use crate::training::training_thread::TrainingThread;
+use crate::training::types::TrainingAction;
 
 slint::include_modules!();
 
@@ -29,6 +31,13 @@ fn main() -> Result<(), Box<dyn Error>> {
     //         ui.set_counter(ui.get_counter() + 1);
     //     }
     // });
+
+    let (actions, messages, handle) = TrainingThread::<Autodiff<Rocm>>::spawn_thread();
+    actions.send(TrainingAction::Start).unwrap();
+    println!("Training thread started");
+    for message in messages {
+        println!("{:?}", message);
+    }
 
     ui.run()?;
 
