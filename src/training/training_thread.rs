@@ -20,7 +20,7 @@ use crate::{dqn::{
     types::{TrainingState, TrainingAction, TrainingMessage},
 }};
 use crate::training::game_model::GameModelConfig;
-use crate::training::training_stats_recorder::TrainingStatsRecorder;
+use crate::training::training_stats_recorder::{TrainingStats, TrainingStatsRecorder};
 
 pub(crate) struct TrainingThread<B: AutodiffBackend> {
     actions: Receiver<TrainingAction>,
@@ -65,7 +65,7 @@ impl<B: AutodiffBackend> TrainingThread<B> {
             if self.training_state == TrainingState::Training {
                 let (updated_model, stats) = self.trainer.run_epoch(model);
                 model = updated_model;
-                // TODO: report progress
+                self.report_progress(stats);
                 // TODO: validation run?
             } else {
                 thread::sleep(Duration::from_millis(200));
@@ -84,5 +84,9 @@ impl<B: AutodiffBackend> TrainingThread<B> {
             Err(TryRecvError::Empty) => (),
             Err(TryRecvError::Disconnected) => panic!("Training thread disconnected"),
         }
+    }
+
+    fn report_progress(&self, stats: TrainingStats) {
+        self.messages.send(TrainingMessage::EpochFinished(stats)).unwrap();
     }
 }
