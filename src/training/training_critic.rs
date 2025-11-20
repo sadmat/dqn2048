@@ -26,7 +26,9 @@ impl CriticType for TrainingCritic {
             if next_state.score == 0 {
                 0.0
             } else {
-                (next_state.score - state.score) as f32 / next_state.score as f32
+                // TODO: test score per move reward
+                // (next_state.score - state.score) as f32 / next_state.score as f32
+                (next_state.score - state.score) as f32 / next_state.max_tile_value() as f32
             }
         }
     }

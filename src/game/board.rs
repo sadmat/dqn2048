@@ -273,6 +273,18 @@ impl<Rng: GameRng> Board<Rng> {
             }
         }
     }
+
+    pub(crate) fn max_tile_value(&self) -> u32 {
+        self.tiles.iter()
+            .filter_map(|item| {
+                match item {
+                    Tile::Value(value) => Some(*value),
+                    Tile::Empty => None
+                }
+            })
+            .max()
+            .unwrap_or_default()
+    }
 }
 
 fn index(row: usize, column: usize) -> usize {

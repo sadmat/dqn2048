@@ -43,13 +43,7 @@ impl StatsRecorderType for TrainingStatsRecorder {
 
     fn record_final_state(&mut self, state: &Self::State) {
         self.last_epoch_score = state.score;
-        for row in 0..NUM_ROWS {
-            for column in 0..NUM_COLUMNS {
-                if let Some(value) = state.value_at(row, column) {
-                    self.best_tile = self.best_tile.max(value);
-                }
-            }
-        }
+        self.best_tile = state.max_tile_value();
     }
 
     fn stats(&self) -> Self::Stats {
