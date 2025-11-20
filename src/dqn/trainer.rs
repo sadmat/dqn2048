@@ -31,7 +31,7 @@ impl Hyperparameters {
             learning_rate: 0.1,
             discount_factor: 0.99,
             exploration_rate: 0.1,
-            batch_size: 32,
+            batch_size: 64,
         }
     }
 }

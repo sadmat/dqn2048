@@ -11,7 +11,8 @@ use crate::dqn::model::Model;
 
 #[derive(Config, Debug)]
 pub(crate) struct GameModelConfig {
-    #[config(default = "16 * 11")]
+    // #[config(default = "16 * 11")]
+    #[config(default = "16")]
     num_inputs: usize,
     #[config(default = "256")]
     hidden1_size: usize,
