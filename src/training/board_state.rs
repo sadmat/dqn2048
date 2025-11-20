@@ -56,7 +56,7 @@ impl StateType for Board<RealGameRng> {
     fn advance(&self, action: &Self::Action) -> Self {
         let mut board = self.clone();
         match action {
-            Direction::Up => board.move_right(),
+            Direction::Up => board.move_up(),
             Direction::Down => board.move_down(),
             Direction::Left => board.move_left(),
             Direction::Right => board.move_right(),
