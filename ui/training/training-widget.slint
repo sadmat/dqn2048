@@ -1,5 +1,7 @@
-import { HorizontalBox, VerticalBox } from "std-widgets.slint";
+import { HorizontalBox, VerticalBox, Button } from "std-widgets.slint";
 import { Style, Colors } from "../styles.slint";
+import { Size } from "../size.slint";
+import { TrainingState, Actions } from "../globals.slint";
 
 component StatWidget inherits Rectangle {
     in property <string> name;
@@ -17,13 +19,6 @@ component StatWidget inherits Rectangle {
             text: value;
         }
     }
-}
-
-export enum TrainingState { idle, training }
-
-export struct Size {
-    width: int,
-    height: int,
 }
 
 export component TrainingWidget inherits Rectangle {
@@ -49,8 +44,6 @@ export component TrainingWidget inherits Rectangle {
         }
 
         VerticalBox {
-            alignment: end;
-
             StatWidget {
                 name: "state";
                 value: training-state-string(state);
@@ -69,6 +62,19 @@ export component TrainingWidget inherits Rectangle {
             StatWidget {
                 name: "best score";
                 value: best-score;
+            }
+
+            Rectangle {}
+
+            Button {
+                text: root.state == TrainingState.idle ? "start" : "pause";
+                clicked => {
+                    if (root.state == TrainingState.idle) {
+                        Actions.start-training();
+                    } else {
+                        Actions.pause-training();
+                    }
+                }
             }
         }
     }

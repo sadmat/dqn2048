@@ -1,24 +1,12 @@
 import { Button, VerticalBox, GridBox } from "std-widgets.slint";
-import {
-    TrainingWidget,
-    TrainingState,
-    Size,
-} from "training/training-widget.slint";
+import { TrainingWidget } from "training/training-widget.slint";
+import { Plots, TrainingStats, Actions, TrainingState } from "globals.slint";
+import { Size } from "size.slint";
 
 export { Size }
+export { Plots, TrainingStats, Actions }
 
 export component AppWindow inherits Window {
-
-    in property <TrainingState> training-state;
-    in property <int> current-epoch;
-    in property <float> epochs-per-second;
-    in property <int> best-score;
-    in property <image> plot-image;
-
-    callback save-model;
-    callback load-model;
-    callback quit;
-    callback plot-size-changed(Size);
 
     MenuBar {
         Menu {
@@ -26,14 +14,14 @@ export component AppWindow inherits Window {
             MenuItem {
                 title: "save model";
                 activated => {
-                    save-model();
+                    Actions.save-model();
                 }
             }
 
             MenuItem {
                 title: "load model";
                 activated => {
-                    load-model();
+                    Actions.load-model();
                 }
             }
 
@@ -42,7 +30,7 @@ export component AppWindow inherits Window {
             MenuItem {
                 title: "quit";
                 activated => {
-                    quit();
+                    Actions.quit();
                 }
             }
         }
@@ -50,13 +38,16 @@ export component AppWindow inherits Window {
 
     VerticalLayout {
         training-widget := TrainingWidget {
-            state: training-state;
-            epoch: current-epoch;
-            epochs-per-second: epochs-per-second;
-            best-score: best-score;
-            plot: plot-image;
+            state: TrainingStats.state;
+            epoch: TrainingStats.epoch;
+            epochs-per-second: TrainingStats.epochs-per-second;
+            best-score: TrainingStats.best-score;
+            plot: Plots.score-plot;
             changed plot-size => {
-                plot-size-changed(self.plot-size);
+                if (Plots.plot-size != self.plot-size) {
+                    Plots.plot-size = self.plot-size;
+                    Actions.plot-size-changed();
+                }
             }
         }
     }

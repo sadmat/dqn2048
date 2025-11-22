@@ -20,21 +20,38 @@ slint::include_modules!();
 fn main() -> Result<(), Box<dyn Error>> {
     let ui = AppWindow::new()?;
 
-    ui.on_plot_size_changed(|size| {
-        println!("OMG! It works...?!!! {:?}", size);
-    });
+    let actions = ui.global::<Actions>();
 
-    ui.on_quit(|| {
+    actions.on_start_training({
+        let ui_handle = ui.as_weak();
+        move || {
+            let ui = ui_handle.unwrap();
+            let stats = ui.global::<TrainingStats>();
+            stats.set_state(TrainingState::Training);
+            println!("TODO: on_start_training()");
+        }
+    });
+    actions.on_pause_training({
+        let ui_handle = ui.as_weak();
+        move || {
+            let ui = ui_handle.unwrap();
+            let stats = ui.global::<TrainingStats>();
+            stats.set_state(TrainingState::Idle);
+            println!("TODO: on_start_training()");
+        }
+    });
+    actions.on_save_model(|| {
+        println!("TODO: on_save_model()");
+    });
+    actions.on_load_model(|| {
+        println!("TODO: on_load_model()");
+    });
+    actions.on_plot_size_changed(|| {
+        println!("TODO: on_plot_size_changed()");
+    });
+    actions.on_quit(|| {
         quit_event_loop().unwrap();
     });
-
-    // ui.on_request_increase_value({
-    //     let ui_handle = ui.as_weak();
-    //     move || {
-    //         let ui = ui_handle.unwrap();
-    //         ui.set_counter(ui.get_counter() + 1);
-    //     }
-    // });
 
     #[cfg(feature = "rocm")]
     let (actions, messages, handle) = TrainingThread::<Autodiff<Rocm>>::spawn_thread();
@@ -43,9 +60,9 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     actions.send(TrainingAction::Start).unwrap();
     println!("Training thread started");
-    for message in messages {
-        println!("{:?}", message);
-    }
+    // for message in messages {
+    //     println!("{:?}", message);
+    // }
 
     ui.run()?;
 
