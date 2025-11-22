@@ -12,7 +12,8 @@ use burn::backend::Autodiff;
 use burn::backend::Cuda;
 #[cfg(feature = "rocm")]
 use burn::backend::Rocm;
-use slint::quit_event_loop;
+use plotters::prelude::*;
+use slint::{quit_event_loop, Image, Rgb8Pixel, SharedPixelBuffer};
 use std::error::Error;
 use std::thread;
 
@@ -51,6 +52,9 @@ fn main() -> Result<(), Box<dyn Error>> {
     });
 
     thread::spawn(move || {
+        let mut scores = Vec::<u32>::new();
+        let mut rewards = Vec::<f32>::new();
+        let mut best_tiles = Vec::<u32>::new();
         let mut best_score: u32 = 0;
         let mut best_tile: u32 = 0;
 
@@ -67,17 +71,25 @@ fn main() -> Result<(), Box<dyn Error>> {
                     }).unwrap();
                 },
                 TrainingMessage::EpochFinished(epoch_stats) => {
+                    scores.push(epoch_stats.last_epoch_score);
+                    rewards.push(epoch_stats.cumulated_epoch_rewards);
+                    best_tiles.push(epoch_stats.best_tile);
                     best_score = best_score.max(epoch_stats.last_epoch_score);
                     best_tile = best_tile.max(epoch_stats.best_tile);
+
+                    let score_plot = plot_score(scores.as_slice(), 600, 400);
 
                     slint::invoke_from_event_loop(move || {
                         let ui_handle = ui_handle.clone();
                         let ui = ui_handle.unwrap();
                         let stats = ui.global::<TrainingStats>();
+                        let plots = ui.global::<Plots>();
+
                         stats.set_epoch(epoch_stats.epochs as i32);
                         stats.set_epochs_per_second(epoch_stats.epochs_per_second.unwrap_or(0.0));
                         stats.set_best_score(best_score as i32);
                         stats.set_best_tile(best_tile as i32);
+                        plots.set_score_plot(Image::from_rgb8(score_plot));
                     }).unwrap();
                 },
             }
@@ -87,6 +99,27 @@ fn main() -> Result<(), Box<dyn Error>> {
     ui.run()?;
 
     Ok(())
+}
+
+fn plot_score(score: &[u32], width: u32, height: u32) -> SharedPixelBuffer<Rgb8Pixel> {
+    let mut pixel_buffer = SharedPixelBuffer::new(width, height);
+    let backend = BitMapBackend::with_buffer(pixel_buffer.make_mut_bytes(), (width, height));
+
+    let root = backend.into_drawing_area();
+    root.fill(&WHITE).unwrap();
+
+    let mut chart = ChartBuilder::on(&root)
+        .caption("Score per epoch", ("sans-serif", 20))
+        .build_cartesian_2d(0..score.len(), 0..(*score.iter().max().unwrap_or(&0) as i32))
+        .expect("failed to build chart");
+
+    chart.configure_mesh().draw().unwrap();
+    
+
+    drop(chart);
+    drop(root);
+
+    pixel_buffer
 }
 
 impl crate::training::types::TrainingState {
