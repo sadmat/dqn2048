@@ -5,11 +5,15 @@ mod dqn;
 mod game;
 mod training;
 
-use std::error::Error;
-use burn::backend::{Autodiff, Rocm};
-use slint::quit_event_loop;
 use crate::training::training_thread::TrainingThread;
 use crate::training::types::TrainingAction;
+use burn::backend::Autodiff;
+#[cfg(feature = "cuda")]
+use burn::backend::Cuda;
+#[cfg(feature = "rocm")]
+use burn::backend::Rocm;
+use slint::quit_event_loop;
+use std::error::Error;
 
 slint::include_modules!();
 
@@ -32,7 +36,11 @@ fn main() -> Result<(), Box<dyn Error>> {
     //     }
     // });
 
+    #[cfg(feature = "rocm")]
     let (actions, messages, handle) = TrainingThread::<Autodiff<Rocm>>::spawn_thread();
+    #[cfg(feature = "cuda")]
+    let (actions, messages, handle) = TrainingThread::<Autodiff<Cuda>>::spawn_thread();
+
     actions.send(TrainingAction::Start).unwrap();
     println!("Training thread started");
     for message in messages {
