@@ -1,6 +1,6 @@
 import { Size } from "size.slint";
 
-export enum TrainingState { idle, training }
+export enum UiTrainingState { idle, training }
 
 export global Plots {
     in-out property <Size> plot-size;
@@ -10,10 +10,11 @@ export global Plots {
 }
 
 export global TrainingStats {
-    in property <TrainingState> state;
+    in property <UiTrainingState> state;
     in property <int> epoch;
     in property <float> epochs-per-second;
     in property <int> best-score;
+    in property <int> best-tile;
     in property <int> recorded-states;
 }
 

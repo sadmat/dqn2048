@@ -17,4 +17,3 @@ pub(crate) enum TrainingMessage {
     StateChanged(TrainingState),
     EpochFinished(TrainingStats),
 }
-

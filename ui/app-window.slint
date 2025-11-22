@@ -1,10 +1,10 @@
 import { Button, VerticalBox, GridBox } from "std-widgets.slint";
 import { TrainingWidget } from "training/training-widget.slint";
-import { Plots, TrainingStats, Actions, TrainingState } from "globals.slint";
+import { Plots, TrainingStats, Actions, UiTrainingState } from "globals.slint";
 import { Size } from "size.slint";
 
 export { Size }
-export { Plots, TrainingStats, Actions }
+export { Plots, TrainingStats, Actions, UiTrainingState }
 
 export component AppWindow inherits Window {
 
@@ -42,6 +42,7 @@ export component AppWindow inherits Window {
             epoch: TrainingStats.epoch;
             epochs-per-second: TrainingStats.epochs-per-second;
             best-score: TrainingStats.best-score;
+            best-tile: TrainingStats.best-tile;
             plot: Plots.score-plot;
             changed plot-size => {
                 if (Plots.plot-size != self.plot-size) {

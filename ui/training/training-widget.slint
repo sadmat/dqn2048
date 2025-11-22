@@ -1,7 +1,7 @@
 import { HorizontalBox, VerticalBox, Button } from "std-widgets.slint";
 import { Style, Colors } from "../styles.slint";
 import { Size } from "../size.slint";
-import { TrainingState, Actions } from "../globals.slint";
+import { UiTrainingState, Actions } from "../globals.slint";
 
 component StatWidget inherits Rectangle {
     in property <string> name;
@@ -22,10 +22,11 @@ component StatWidget inherits Rectangle {
 }
 
 export component TrainingWidget inherits Rectangle {
-    in property <TrainingState> state;
+    in property <UiTrainingState> state;
     in property <int> epoch;
     in property <float> epochs-per-second;
     in property <int> best-score;
+    in property <int> best-tile;
     in property <image> plot;
     out property <Size> plot-size: { width: image.width / 1px, height: image.height / 1px };
 
@@ -44,6 +45,7 @@ export component TrainingWidget inherits Rectangle {
         }
 
         VerticalBox {
+            width: 200px;
             StatWidget {
                 name: "state";
                 value: training-state-string(state);
@@ -56,7 +58,7 @@ export component TrainingWidget inherits Rectangle {
 
             StatWidget {
                 name: "epochs/s";
-                value: epochs-per-second;
+                value: epochs-per-second.to-fixed(1);
             }
 
             StatWidget {
@@ -64,12 +66,17 @@ export component TrainingWidget inherits Rectangle {
                 value: best-score;
             }
 
+            StatWidget {
+                name: "best tile";
+                value: best-tile;
+            }
+
             Rectangle {}
 
             Button {
-                text: root.state == TrainingState.idle ? "start" : "pause";
+                text: root.state == UiTrainingState.idle ? "start" : "pause";
                 clicked => {
-                    if (root.state == TrainingState.idle) {
+                    if (root.state == UiTrainingState.idle) {
                         Actions.start-training();
                     } else {
                         Actions.pause-training();
@@ -79,7 +86,7 @@ export component TrainingWidget inherits Rectangle {
         }
     }
 
-    function training-state-string(state: TrainingState) -> string {
-        return state == TrainingState.idle ? "idle" : state == TrainingState.training ? "training" : "unknown";
+    function training-state-string(state: UiTrainingState) -> string {
+        return state == UiTrainingState.idle ? "idle" : state == UiTrainingState.training ? "training" : "unknown";
     }
 }

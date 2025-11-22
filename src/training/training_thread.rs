@@ -21,6 +21,7 @@ use crate::{dqn::{
 }};
 use crate::training::game_model::GameModelConfig;
 use crate::training::training_stats_recorder::{TrainingStats, TrainingStatsRecorder};
+use crate::training::types::TrainingState::Training;
 
 pub(crate) struct TrainingThread<B: AutodiffBackend> {
     actions: Receiver<TrainingAction>,
@@ -78,8 +79,14 @@ impl<B: AutodiffBackend> TrainingThread<B> {
             Ok(action) => {
                 println!("Training thread received action {:?}", action);
                 match action {
-                    TrainingAction::Pause => self.training_state = TrainingState::Idle,
-                    TrainingAction::Start => self.training_state = TrainingState::Training,
+                    TrainingAction::Pause => {
+                        self.training_state = TrainingState::Idle;
+                        self.messages.send(TrainingMessage::StateChanged(TrainingState::Idle)).unwrap();
+                    },
+                    TrainingAction::Start => {
+                        self.training_state = TrainingState::Training;
+                        self.messages.send(TrainingMessage::StateChanged(TrainingState::Training)).unwrap();
+                    },
                 }
             },
             Err(TryRecvError::Empty) => (),
