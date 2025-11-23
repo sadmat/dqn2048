@@ -102,6 +102,8 @@ fn main() -> Result<(), Box<dyn Error>> {
 }
 
 fn plot_score(score: &[u32], width: u32, height: u32) -> SharedPixelBuffer<Rgb8Pixel> {
+    let x_axis_length = score.len().max(width as usize);
+
     let mut pixel_buffer = SharedPixelBuffer::new(width, height);
     let backend = BitMapBackend::with_buffer(pixel_buffer.make_mut_bytes(), (width, height));
 
@@ -110,11 +112,21 @@ fn plot_score(score: &[u32], width: u32, height: u32) -> SharedPixelBuffer<Rgb8P
 
     let mut chart = ChartBuilder::on(&root)
         .caption("Score per epoch", ("sans-serif", 20))
-        .build_cartesian_2d(0..score.len(), 0..(*score.iter().max().unwrap_or(&0) as i32))
+        .margin(8)
+        .x_label_area_size(20)
+        .y_label_area_size(30)
+        .build_cartesian_2d(0..x_axis_length, 0..(*score.iter().max().unwrap_or(&0)))
         .expect("failed to build chart");
 
     chart.configure_mesh().draw().unwrap();
-    
+
+    let points = score.iter()
+        .enumerate()
+        .map(|(i, x)| {
+            (i, *x)
+        });
+
+    chart.draw_series(LineSeries::new(points, RED)).unwrap();
 
     drop(chart);
     drop(root);
