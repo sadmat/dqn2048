@@ -1,6 +1,6 @@
 import { HorizontalBox, VerticalBox, Button } from "std-widgets.slint";
 import { Style, Colors } from "../styles.slint";
-import { Size } from "../size.slint";
+import { PlotSize } from "../size.slint";
 import { UiTrainingState, Actions } from "../globals.slint";
 
 component StatWidget inherits Rectangle {
@@ -8,6 +8,8 @@ component StatWidget inherits Rectangle {
     in property <string> value;
 
     HorizontalBox {
+        padding: 0;
+        padding-bottom: 8px;
         alignment: space-between;
 
         Text {
@@ -27,20 +29,55 @@ export component TrainingWidget inherits Rectangle {
     in property <float> epochs-per-second;
     in property <int> best-score;
     in property <int> best-tile;
-    in property <image> plot;
-    out property <Size> plot-size: { width: image.width / 1px, height: image.height / 1px };
+    in property <image> score-plot;
+    in property <image> reward-plot;
+    in property <image> best-tile-plot;
+    out property <PlotSize> score-plot-size: { width: score-plot-image.width / 1px, height: score-plot-image.height / 1px };
+    out property <PlotSize> reward-plot-size: { width: reward-plot-image.width / 1px, height: reward-plot-image.height / 1px };
+    out property <PlotSize> best-tile-plot-size: { width: best-tile-plot-image.width / 1px, height: best-tile-plot-image.height / 1px };
 
     HorizontalBox {
-        Rectangle {
-            min-width: 600px;
-            min-height: 400px;
-            border-radius: Style.corner-radius;
-            background: Colors.game-background;
+        VerticalBox {
+            min-width: 1000px;
+            min-height: 600px;
 
-            image := Image {
-                source: plot;
-                width: 100%;
-                height: 100%;
+            Rectangle {
+                border-radius: Style.corner-radius;
+                background: Colors.game-background;
+
+                score-plot-image := Image {
+                    source: score-plot;
+                    width: 100%;
+                    height: 100%;
+                }
+            }
+
+            HorizontalBox {
+                padding-top: 0;
+                padding-left: 0;
+                padding-right: 0;
+
+                Rectangle {
+                    border-radius: Style.corner-radius;
+                    background: Colors.game-background;
+
+                    reward-plot-image := Image {
+                        source: reward-plot;
+                        width: 100%;
+                        height: 100%;
+                    }
+                }
+
+                Rectangle {
+                    border-radius: Style.corner-radius;
+                    background: Colors.game-background;
+
+                    best-tile-plot-image := Image {
+                        source: best-tile-plot;
+                        width: 100%;
+                        height: 100%;
+                    }
+                }
             }
         }
 
@@ -71,7 +108,7 @@ export component TrainingWidget inherits Rectangle {
                 value: best-tile;
             }
 
-            Rectangle {}
+            Rectangle { }
 
             Button {
                 text: root.state == UiTrainingState.idle ? "start" : "pause";

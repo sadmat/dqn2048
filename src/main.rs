@@ -4,6 +4,7 @@
 mod dqn;
 mod game;
 mod training;
+mod ui;
 
 use crate::training::training_thread::TrainingThread;
 use crate::training::types::{TrainingAction, TrainingMessage};
@@ -13,7 +14,7 @@ use burn::backend::Cuda;
 #[cfg(feature = "rocm")]
 use burn::backend::Rocm;
 use plotters::prelude::*;
-use slint::{quit_event_loop, Image, Rgb8Pixel, SharedPixelBuffer};
+use slint::{Image, Rgb8Pixel, SharedPixelBuffer, quit_event_loop};
 use std::error::Error;
 use std::thread;
 
@@ -32,11 +33,15 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     actions.on_start_training({
         let action_tx = actions_tx.clone();
-        move || { action_tx.send(TrainingAction::Start).unwrap(); }
+        move || {
+            action_tx.send(TrainingAction::Start).unwrap();
+        }
     });
     actions.on_pause_training({
         let action_tx = actions_tx.clone();
-        move || { action_tx.send(TrainingAction::Pause).unwrap(); }
+        move || {
+            action_tx.send(TrainingAction::Pause).unwrap();
+        }
     });
     actions.on_save_model(|| {
         println!("TODO: on_save_model()");
@@ -68,8 +73,9 @@ fn main() -> Result<(), Box<dyn Error>> {
                         let ui = ui_handle.unwrap();
                         let stats = ui.global::<TrainingStats>();
                         stats.set_state(state.as_ui_training_state());
-                    }).unwrap();
-                },
+                    })
+                    .unwrap();
+                }
                 TrainingMessage::EpochFinished(epoch_stats) => {
                     scores.push(epoch_stats.last_epoch_score);
                     rewards.push(epoch_stats.cumulated_epoch_rewards);
@@ -90,8 +96,9 @@ fn main() -> Result<(), Box<dyn Error>> {
                         stats.set_best_score(best_score as i32);
                         stats.set_best_tile(best_tile as i32);
                         plots.set_score_plot(Image::from_rgb8(score_plot));
-                    }).unwrap();
-                },
+                    })
+                    .unwrap();
+                }
             }
         }
     });
@@ -120,11 +127,7 @@ fn plot_score(score: &[u32], width: u32, height: u32) -> SharedPixelBuffer<Rgb8P
 
     chart.configure_mesh().draw().unwrap();
 
-    let points = score.iter()
-        .enumerate()
-        .map(|(i, x)| {
-            (i, *x)
-        });
+    let points = score.iter().enumerate().map(|(i, x)| (i, *x));
 
     chart.draw_series(LineSeries::new(points, RED)).unwrap();
 

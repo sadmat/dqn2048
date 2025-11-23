@@ -1,9 +1,11 @@
-import { Size } from "size.slint";
+import { PlotSize } from "size.slint";
 
 export enum UiTrainingState { idle, training }
 
 export global Plots {
-    in-out property <Size> plot-size;
+    in-out property <PlotSize> score-plot-size;
+    in-out property <PlotSize> reward-plot-size;
+    in-out property <PlotSize> best-tile-plot-size;
     in property <image> score-plot;
     in property <image> reward-plot;
     in property <image> best-tile-plot;
@@ -26,3 +28,4 @@ export global Actions {
     callback start-training;
     callback pause-training;
 }
+
