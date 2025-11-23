@@ -1,10 +1,15 @@
 import { Button, VerticalBox, GridBox } from "std-widgets.slint";
 import { TrainingWidget } from "training/training-widget.slint";
-import { Plots, TrainingStats, Actions, UiTrainingState } from "globals.slint";
+import {
+    Plots,
+    UiTrainingStats,
+    Actions,
+    UiTrainingState,
+} from "globals.slint";
 import { PlotSize } from "size.slint";
 
 export { PlotSize }
-export { Plots, TrainingStats, Actions, UiTrainingState }
+export { Plots, UiTrainingStats, Actions, UiTrainingState }
 
 export component AppWindow inherits Window {
 
@@ -38,11 +43,11 @@ export component AppWindow inherits Window {
 
     VerticalLayout {
         training-widget := TrainingWidget {
-            state: TrainingStats.state;
-            epoch: TrainingStats.epoch;
-            epochs-per-second: TrainingStats.epochs-per-second;
-            best-score: TrainingStats.best-score;
-            best-tile: TrainingStats.best-tile;
+            state: UiTrainingStats.state;
+            epoch: UiTrainingStats.epoch;
+            epochs-per-second: UiTrainingStats.epochs-per-second;
+            best-score: UiTrainingStats.best-score;
+            best-tile: UiTrainingStats.best-tile;
             score-plot: Plots.score-plot;
             reward-plot: Plots.reward-plot;
             best-tile-plot: Plots.best-tile-plot;

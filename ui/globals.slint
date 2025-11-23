@@ -11,7 +11,7 @@ export global Plots {
     in property <image> best-tile-plot;
 }
 
-export global TrainingStats {
+export global UiTrainingStats {
     in property <UiTrainingState> state;
     in property <int> epoch;
     in property <float> epochs-per-second;
@@ -28,4 +28,3 @@ export global Actions {
     callback start-training;
     callback pause-training;
 }
-
