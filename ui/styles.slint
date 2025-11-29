@@ -8,6 +8,7 @@ export global Style {
     out property <length> score-height: 82px;
     out property <string> font-name: "Clear sans";
     out property <int> font-weight: 600;
+    out property <length> plots-spacing: 8px;
 
     public pure function tile-font-size(value: int) -> length {
         if (value >= 2 && value < 16) {

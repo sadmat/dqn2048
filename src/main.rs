@@ -55,14 +55,11 @@ fn main() -> Result<(), Box<dyn Error>> {
     actions.on_load_model(|| {
         println!("TODO: on_load_model()");
     });
-    actions.on_plot_size_changed(move || {
+    actions.on_plots_area_size_changed(move || {
         let ui = ui_handle.unwrap();
         let plots = ui.global::<Plots>();
-        let sizes = PlotsSizes::new(
-            plots.get_score_plot_size(),
-            plots.get_reward_plot_size(),
-            plots.get_best_tile_plot_size(),
-        );
+        let area_size = plots.get_plots_area_size();
+        let sizes = PlotsSizes::from(area_size);
         updates_tx.send(PlotsSizesChanged(sizes)).unwrap();
     });
     actions.on_quit(|| {

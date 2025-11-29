@@ -15,6 +15,6 @@ slint = "1.12.1"
 slint-build = "1.12.1"
 
 [features]
-default = ["rocm"]
+default = ["cuda"]
 rocm = ["burn/rocm"]
 cuda = ["burn/cuda"]

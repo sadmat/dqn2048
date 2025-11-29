@@ -30,6 +30,27 @@ impl PlotsSizes {
             best_tile_plot_size,
         }
     }
+
+    pub(crate) fn from(area_size: PlotSize) -> PlotsSizes {
+        let spacing = 8;
+        let score = PlotSize {
+            width: area_size.width,
+            height: (area_size.height - spacing) / 2,
+        };
+        let reward = PlotSize {
+            width: (area_size.width - spacing) / 2,
+            height: (area_size.height - spacing) / 2,
+        };
+        let best_tile = PlotSize {
+            width: (area_size.width - spacing) / 2,
+            height: (area_size.height - spacing) / 2,
+        };
+        PlotsSizes {
+            score_plot_size: score,
+            reward_plot_size: reward,
+            best_tile_plot_size: best_tile,
+        }
+    }
 }
 
 pub(crate) enum TrainingOverviewUpdate {

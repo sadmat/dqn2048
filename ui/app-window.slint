@@ -51,22 +51,10 @@ export component AppWindow inherits Window {
             score-plot: Plots.score-plot;
             reward-plot: Plots.reward-plot;
             best-tile-plot: Plots.best-tile-plot;
-            changed score-plot-size => {
-                if (Plots.score-plot-size != self.score-plot-size) {
-                    Plots.score-plot-size = self.score-plot-size;
-                    Actions.plot-size-changed();
-                }
-            }
-            changed reward-plot-size => {
-                if (Plots.reward-plot-size != self.reward-plot-size) {
-                    Plots.reward-plot-size = self.reward-plot-size;
-                    Actions.plot-size-changed();
-                }
-            }
-            changed best-tile-plot-size => {
-                if (Plots.best-tile-plot-size != self.best-tile-plot-size) {
-                    Plots.best-tile-plot-size = self.best-tile-plot-size;
-                    Actions.plot-size-changed();
+            changed plots-area-size => {
+                if (Plots.plots-area-size != self.plots-area-size) {
+                    Plots.plots-area-size = self.plots-area-size;
+                    Actions.plots-area-size-changed()
                 }
             }
         }
