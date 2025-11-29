@@ -17,8 +17,8 @@ impl ActionType for Direction {
     }
 }
 
-// const NUM_FEATURES: usize = NUM_TILES * 11;
-const NUM_FEATURES: usize = NUM_TILES;
+const NUM_FEATURES: usize = NUM_TILES * 11;
+// const NUM_FEATURES: usize = NUM_TILES;
 
 impl StateType for Board<RealGameRng> {
     type Action = Direction;
@@ -75,7 +75,12 @@ impl StateType for Board<RealGameRng> {
         for row in 0..NUM_ROWS {
             for column in 0..NUM_COLUMNS {
                 let tile_value = self.value_at(row, column).unwrap_or_default();
-                features.push(if tile_value == 0 { 0.0 } else { tile_value.ilog2() as f32 });
+                let mut inputs = vec![0.0; 11];
+                if tile_value > 0 {
+                    let index = tile_value.ilog2().min((inputs.len() - 1) as u32) as usize;
+                    inputs[index] = 1.0;
+                }
+                features.extend(inputs);
                 // #[rustfmt::skip]
                 // let inputs = match tile_value {
                 //     2    => [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0],
@@ -92,6 +97,7 @@ impl StateType for Board<RealGameRng> {
                 //     _    => [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
                 // };
                 // features.extend_from_slice(inputs.as_slice());
+                // features.push(if tile_value == 0 { 0.0 } else { tile_value.ilog2() as f32 });
             }
         }
         features

@@ -10,13 +10,13 @@ use burn::{
 };
 use rand::{distr::uniform::SampleRange, rng, rngs::ThreadRng, seq::IndexedRandom, thread_rng};
 
+use crate::dqn::stats::StatsRecorderType;
 use crate::dqn::{
     critic::CriticType,
     model::Model,
     replay_buffer::{ReplayBuffer, StateTransition},
     state::{ActionType, StateType},
 };
-use crate::dqn::stats::StatsRecorderType;
 
 pub(crate) struct Hyperparameters {
     pub learning_rate: f32,
@@ -28,10 +28,10 @@ pub(crate) struct Hyperparameters {
 impl Hyperparameters {
     pub(crate) fn new() -> Self {
         Hyperparameters {
-            learning_rate: 0.1,
+            learning_rate: 0.0001,
             discount_factor: 0.99,
-            exploration_rate: 0.1,
-            batch_size: 64,
+            exploration_rate: 0.05,
+            batch_size: 128,
         }
     }
 }
@@ -105,7 +105,7 @@ where
             .max_dim(1)
             .squeeze_dim(1);
         let target_qvalues = batch.rewards
-            + (batch.is_terminal - 1.0) * self.config.discount_factor * target_qvalues;
+            - (batch.is_terminal - 1.0) * self.config.discount_factor * target_qvalues;
 
         let loss = huber_loss.forward(qvalues, target_qvalues, Auto);
         let grads = loss.backward();
