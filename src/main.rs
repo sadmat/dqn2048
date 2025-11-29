@@ -17,9 +17,10 @@ use burn::backend::Cuda;
 #[cfg(feature = "rocm")]
 use burn::backend::Rocm;
 use plotters::prelude::*;
-use slint::{Image, Rgb8Pixel, SharedPixelBuffer, quit_event_loop};
+use slint::{Image, Rgb8Pixel, SharedPixelBuffer, Timer, quit_event_loop};
 use std::error::Error;
 use std::thread;
+use std::time::Duration;
 
 slint::include_modules!();
 
@@ -55,15 +56,25 @@ fn main() -> Result<(), Box<dyn Error>> {
     actions.on_load_model(|| {
         println!("TODO: on_load_model()");
     });
-    actions.on_plots_area_size_changed(move || {
-        let ui = ui_handle.unwrap();
-        let plots = ui.global::<Plots>();
-        let area_size = plots.get_plots_area_size();
-        let sizes = PlotsSizes::from(area_size);
-        updates_tx.send(PlotsSizesChanged(sizes)).unwrap();
+    actions.on_plots_area_size_changed({
+        let ui_handle = ui_handle.clone();
+        move || {
+            let ui = ui_handle.unwrap();
+            let plots = ui.global::<Plots>();
+            let area_size = plots.get_plots_area_size();
+
+            let sizes = PlotsSizes::from(area_size);
+            updates_tx.send(PlotsSizesChanged(sizes)).unwrap();
+        }
     });
     actions.on_quit(|| {
         quit_event_loop().unwrap();
+    });
+
+    let ui_handle = ui_handle.clone();
+    Timer::single_shot(Duration::from_millis(10), move || {
+        let ui = ui_handle.unwrap();
+        ui.invoke_force_plots_area_size_update();
     });
 
     ui.run()?;

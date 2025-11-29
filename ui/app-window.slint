@@ -59,4 +59,9 @@ export component AppWindow inherits Window {
             }
         }
     }
+
+    public function force-plots-area-size-update() {
+        Plots.plots-area-size = training-widget.plots-area-size;
+        Actions.plots-area-size-changed();
+    }
 }
