@@ -17,8 +17,9 @@ use burn::backend::Cuda;
 #[cfg(feature = "rocm")]
 use burn::backend::Rocm;
 use plotters::prelude::*;
-use slint::{Image, Rgb8Pixel, SharedPixelBuffer, Timer, quit_event_loop};
+use slint::{Image, Rgb8Pixel, SharedPixelBuffer, Timer, quit_event_loop, Weak, TimerMode};
 use std::error::Error;
+use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Duration;
 
@@ -33,7 +34,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let ui = AppWindow::new()?;
     let ui_handle = ui.as_weak();
 
-    let (updates_tx, _) = TrainingOverviewThread::spawn_thread(ui_handle.clone());
+    let (updates_tx, _, epochs_per_second) = TrainingOverviewThread::spawn_thread(ui_handle.clone());
     let _ = TrainingUpdateAdapter::spawn_thread(messages_rx, updates_tx.clone());
 
     let actions = ui.global::<Actions>();
@@ -71,13 +72,29 @@ fn main() -> Result<(), Box<dyn Error>> {
         quit_event_loop().unwrap();
     });
 
-    let ui_handle = ui_handle.clone();
-    Timer::single_shot(Duration::from_millis(10), move || {
-        let ui = ui_handle.unwrap();
-        ui.invoke_force_plots_area_size_update();
-    });
+    start_plots_area_update_timer(ui_handle.clone());
+    let _timer = start_epochs_per_second_timer(epochs_per_second, ui_handle.clone());
 
     ui.run()?;
 
     Ok(())
+}
+
+fn start_plots_area_update_timer(ui_handle: Weak<AppWindow>) {
+    Timer::single_shot(Duration::from_millis(10), move || {
+        let ui = ui_handle.unwrap();
+        ui.invoke_force_plots_area_size_update();
+    });
+}
+
+fn start_epochs_per_second_timer(epochs_per_second: Arc<Mutex<u32>>, ui_handle: Weak<AppWindow>) -> Timer {
+    let timer = Timer::default();
+    timer.start(TimerMode::Repeated, Duration::from_secs(1), move || {
+        let mut counter = epochs_per_second.lock().unwrap();
+        let ui = ui_handle.unwrap();
+        let stats = ui.global::<UiTrainingStats>();
+        stats.set_epochs_per_second(*counter as i32);
+        *counter = 0;
+    });
+    timer
 }

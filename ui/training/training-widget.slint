@@ -32,7 +32,7 @@ component StatWidget inherits Rectangle {
 export component TrainingWidget inherits Rectangle {
     in property <UiTrainingState> state;
     in property <int> epoch;
-    in property <float> epochs-per-second;
+    in property <int> epochs-per-second;
     in property <int> best-score;
     in property <int> best-tile;
     in property <int> recorded-transitions;
@@ -108,7 +108,7 @@ export component TrainingWidget inherits Rectangle {
 
             StatWidget {
                 name: "epochs/s";
-                value: epochs-per-second.to-fixed(1);
+                value: epochs-per-second;
             }
 
             StatWidget {

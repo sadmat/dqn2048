@@ -1,5 +1,5 @@
 use plotters::prelude::*;
-use slint::{ComponentHandle, Image, Rgb8Pixel, SharedPixelBuffer, Weak};
+use slint::{ComponentHandle, Image, Rgb8Pixel, SharedPixelBuffer, Timer, TimerMode, Weak};
 
 use crate::{
     AppWindow, PlotSize, Plots, UiTrainingStats,
@@ -10,6 +10,8 @@ use std::{
     sync::mpsc::*,
     thread::{self, JoinHandle},
 };
+use std::sync::{Arc, Mutex};
+use std::time::Duration;
 
 #[derive(Default)]
 pub(crate) struct PlotsSizes {
@@ -67,20 +69,22 @@ pub(crate) struct TrainingOverviewThread {
     best_score: u32,
     best_tile: u32,
     plots_sizes: PlotsSizes,
+    epoch_per_second_counter: Arc<Mutex<u32>>,
 }
 
 impl TrainingOverviewThread {
     pub(crate) fn spawn_thread(
         ui_handle: Weak<AppWindow>,
-    ) -> (Sender<TrainingOverviewUpdate>, JoinHandle<()>) {
+    ) -> (Sender<TrainingOverviewUpdate>, JoinHandle<()>, Arc<Mutex<u32>>) {
         let (tx, rx) = channel();
         let mut thread = Self::new(ui_handle);
+        let epochs_per_second = thread.epoch_per_second_counter.clone();
 
         let handle = thread::spawn(move || {
             thread.execute(rx);
         });
 
-        (tx, handle)
+        (tx, handle, epochs_per_second)
     }
 
     fn new(ui_handle: Weak<AppWindow>) -> Self {
@@ -92,6 +96,7 @@ impl TrainingOverviewThread {
             best_score: 0,
             best_tile: 0,
             plots_sizes: Default::default(),
+            epoch_per_second_counter: Arc::new(Mutex::new(0)),
         }
     }
 
@@ -140,6 +145,9 @@ impl TrainingOverviewThread {
         .unwrap();
 
         self.update_plots();
+
+        let mut counter = self.epoch_per_second_counter.lock().unwrap();
+        *counter += 1;
     }
 
     fn handle_new_state(&mut self, state: TrainingState) {
