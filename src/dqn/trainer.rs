@@ -17,6 +17,7 @@ use crate::dqn::{
     replay_buffer::{ReplayBuffer, StateTransition},
     state::{ActionType, StateType},
 };
+use crate::dqn::data_augmenter::DataAugmenterType;
 
 pub(crate) struct Hyperparameters {
     pub learning_rate: f32,
@@ -36,7 +37,7 @@ impl Hyperparameters {
     }
 }
 
-pub(crate) struct Trainer<B, M, S, C, R>
+pub(crate) struct Trainer<B, M, S, C, R, D>
 where
     B: AutodiffBackend,
     M: Model<B> + AutodiffModule<B>,
@@ -44,16 +45,17 @@ where
     S: StateType,
     C: CriticType<State = S>,
     R: StatsRecorderType<State = S>,
+    D: DataAugmenterType<State = S>,
 {
     config: Hyperparameters,
     critic: C,
-    replay_buffer: ReplayBuffer<S>,
+    replay_buffer: ReplayBuffer<S, D>,
     optimizer: OptimizerAdaptor<Adam, M, B>,
     device: Device<B>,
     stats_recorder: R,
 }
 
-impl<B, M, S, C, R> Trainer<B, M, S, C, R>
+impl<B, M, S, C, R, D> Trainer<B, M, S, C, R, D>
 where
     B: AutodiffBackend,
     M: Model<B> + AutodiffModule<B>,
@@ -61,12 +63,13 @@ where
     S: StateType,
     C: CriticType<State = S>,
     R: StatsRecorderType<State = S>,
+    D: DataAugmenterType<State = S>
 {
-    pub fn new(config: Hyperparameters, critic: C, device: Device<B>) -> Trainer<B, M, S, C, R> {
+    pub fn new(config: Hyperparameters, critic: C, data_augmenter: D, device: Device<B>) -> Trainer<B, M, S, C, R, D> {
         Trainer {
             config,
             critic: critic,
-            replay_buffer: ReplayBuffer::new(),
+            replay_buffer: ReplayBuffer::new(data_augmenter),
             optimizer: AdamConfig::new().init(),
             device: device,
             stats_recorder: Default::default(),

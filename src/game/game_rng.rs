@@ -2,16 +2,22 @@ use rand::Rng;
 
 use crate::game::board::NUM_TILES;
 
-pub(crate) trait GameRng {
+pub(crate) trait GameRng: Default {
     fn new_tile_value(&self) -> u32;
     fn new_tile_position(&self) -> usize;
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub(crate) struct RealGameRng {}
 
 impl RealGameRng {
     pub(crate) fn new() -> Self {
+        RealGameRng {}
+    }
+}
+
+impl Default for RealGameRng {
+    fn default() -> Self {
         RealGameRng {}
     }
 }
@@ -40,6 +46,15 @@ impl FakeGameRng {
         FakeGameRng {
             tile_value,
             tile_position,
+        }
+    }
+}
+
+impl Default for FakeGameRng {
+    fn default() -> Self {
+        FakeGameRng {
+            tile_value: 2,
+            tile_position: 0,
         }
     }
 }

@@ -1,3 +1,4 @@
+use std::ptr::eq;
 use rand::prelude::*;
 
 use crate::game::game_rng::{GameRng, RealGameRng};
@@ -20,7 +21,7 @@ pub(crate) const NUM_ROWS: usize = 4;
 pub(crate) const NUM_COLUMNS: usize = 4;
 pub(crate) const NUM_TILES: usize = NUM_ROWS * NUM_COLUMNS;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub(crate) struct Board<Rng: GameRng> {
     pub(crate) score: u32,
     tiles: [Tile; NUM_TILES],
@@ -41,12 +42,16 @@ impl Board<RealGameRng> {
 }
 
 impl<Rng: GameRng> Board<Rng> {
-    fn new_with_tiles(tiles: [Tile; NUM_TILES], rng: Rng) -> Board<Rng> {
+    pub fn new_with_tiles(tiles: [Tile; NUM_TILES], rng: Rng) -> Board<Rng> {
         Board {
             score: 0,
             tiles: tiles,
             rng: rng,
         }
+    }
+
+    pub fn new_with_tiles_and_score(tiles: [Tile; NUM_TILES], score: u32, rng: Rng) -> Board<Rng> {
+        Board { score, tiles, rng }
     }
 
     fn place_random_tile(&mut self) {
@@ -284,6 +289,17 @@ impl<Rng: GameRng> Board<Rng> {
             })
             .max()
             .unwrap_or_default()
+    }
+}
+
+impl<R: GameRng> PartialEq for Board<R> {
+    fn eq(&self, other: &Self) -> bool {
+        self.tiles == other.tiles &&
+            self.score == other.score
+    }
+
+    fn ne(&self, other: &Self) -> bool {
+        !eq(self, other)
     }
 }
 

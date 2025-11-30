@@ -9,7 +9,7 @@ use burn::{
     prelude::{Backend, Float},
     tensor::backend::AutodiffBackend,
 };
-
+use burn::prelude::Device;
 use crate::{dqn::{
     critic::CriticType,
     model::Model,
@@ -20,13 +20,14 @@ use crate::{dqn::{
     types::{TrainingState, TrainingAction, TrainingMessage},
 }};
 use crate::training::game_model::GameModelConfig;
+use crate::training::training_data_augmenter::TrainingDataAugmenter;
 use crate::training::training_stats_recorder::{TrainingStats, TrainingStatsRecorder};
 use crate::training::types::TrainingState::Training;
 
 pub(crate) struct TrainingThread<B: AutodiffBackend> {
     actions: Receiver<TrainingAction>,
     messages: Sender<TrainingMessage>,
-    trainer: Trainer<B, GameModel<B>, Board<RealGameRng>, TrainingCritic, TrainingStatsRecorder>,
+    trainer: Trainer<B, GameModel<B>, Board<RealGameRng>, TrainingCritic, TrainingStatsRecorder, TrainingDataAugmenter>,
     training_state: TrainingState,
 }
 
@@ -53,7 +54,7 @@ impl<B: AutodiffBackend> TrainingThread<B> {
         TrainingThread {
             actions,
             messages,
-            trainer: Trainer::new(hyperparams, TrainingCritic::new(), Default::default()),
+            trainer: Trainer::new(hyperparams, TrainingCritic::new(), TrainingDataAugmenter::default(), Default::default()),
             training_state: TrainingState::Idle,
         }
     }

@@ -2,20 +2,23 @@ use burn::prelude::Backend;
 use rand::seq::IndexedRandom;
 
 use crate::dqn::{state::StateType, training_batch::TrainingBatch};
+use crate::dqn::data_augmenter::DataAugmenterType;
 
-pub struct ReplayBuffer<S: StateType> {
+pub struct ReplayBuffer<S: StateType, D: DataAugmenterType<State = S>> {
+    data_augmenter: D,
     transitions: Vec<StateTransition<S>>,
 }
 
-impl<S: StateType> ReplayBuffer<S> {
-    pub fn new() -> Self {
+impl<S: StateType, D: DataAugmenterType<State = S>> ReplayBuffer<S, D> {
+    pub fn new(data_augmenter: D) -> Self {
         ReplayBuffer {
+            data_augmenter,
             transitions: Vec::new(),
         }
     }
 
     pub fn store(&mut self, transition: StateTransition<S>) {
-        self.transitions.push(transition);
+        self.transitions.extend(self.data_augmenter.augment(transition));
     }
 
     pub fn size(&self) -> usize {
@@ -30,6 +33,7 @@ impl<S: StateType> ReplayBuffer<S> {
     }
 }
 
+#[derive(Clone, PartialEq, Debug)]
 pub struct StateTransition<S: StateType> {
     pub state: S,
     pub action: S::Action,

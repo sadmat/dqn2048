@@ -4,3 +4,4 @@ pub(crate) mod training_critic;
 pub(crate) mod training_stats_recorder;
 pub(crate) mod training_thread;
 pub(crate) mod types;
+mod training_data_augmenter;
