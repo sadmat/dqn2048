@@ -35,6 +35,7 @@ export component TrainingWidget inherits Rectangle {
     in property <float> epochs-per-second;
     in property <int> best-score;
     in property <int> best-tile;
+    in property <int> recorded-transitions;
     in property <image> score-plot;
     in property <image> reward-plot;
     in property <image> best-tile-plot;
@@ -118,6 +119,11 @@ export component TrainingWidget inherits Rectangle {
             StatWidget {
                 name: "best tile";
                 value: best-tile;
+            }
+
+            StatWidget {
+                name: "recorded moves";
+                value: recorded-transitions;
             }
 
             Rectangle { }

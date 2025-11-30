@@ -10,6 +10,7 @@ use burn::{
 };
 use rand::{distr::uniform::SampleRange, rng, rngs::ThreadRng, seq::IndexedRandom, thread_rng};
 
+use crate::dqn::data_augmenter::DataAugmenterType;
 use crate::dqn::stats::StatsRecorderType;
 use crate::dqn::{
     critic::CriticType,
@@ -17,7 +18,6 @@ use crate::dqn::{
     replay_buffer::{ReplayBuffer, StateTransition},
     state::{ActionType, StateType},
 };
-use crate::dqn::data_augmenter::DataAugmenterType;
 
 pub(crate) struct Hyperparameters {
     pub learning_rate: f32,
@@ -63,9 +63,14 @@ where
     S: StateType,
     C: CriticType<State = S>,
     R: StatsRecorderType<State = S>,
-    D: DataAugmenterType<State = S>
+    D: DataAugmenterType<State = S>,
 {
-    pub fn new(config: Hyperparameters, critic: C, data_augmenter: D, device: Device<B>) -> Trainer<B, M, S, C, R, D> {
+    pub fn new(
+        config: Hyperparameters,
+        critic: C,
+        data_augmenter: D,
+        device: Device<B>,
+    ) -> Trainer<B, M, S, C, R, D> {
         Trainer {
             config,
             critic: critic,
@@ -91,6 +96,8 @@ where
             self.stats_recorder.record_reward(reward);
         }
         self.stats_recorder.record_final_state(&state);
+        self.stats_recorder
+            .record_replay_buffer_size(self.replay_buffer.size());
 
         if self.replay_buffer.size() < self.config.batch_size {
             return (model, self.stats_recorder.stats());
@@ -114,7 +121,8 @@ where
         let grads = loss.backward();
         let grads = GradientsParams::from_grads(grads, &model);
 
-        let model = self.optimizer
+        let model = self
+            .optimizer
             .step(self.config.learning_rate as f64, model, grads);
         let stats = self.stats_recorder.stats();
 

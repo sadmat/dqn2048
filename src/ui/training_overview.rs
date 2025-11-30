@@ -132,9 +132,10 @@ impl TrainingOverviewThread {
             let stats = ui.global::<UiTrainingStats>();
 
             stats.set_epoch(training_stats.epochs as i32);
-            stats.set_epochs_per_second(training_stats.epochs_per_second.unwrap_or(0.0));
+            // stats.set_epochs_per_second(training_stats.epochs_per_second.unwrap_or(0.0));
             stats.set_best_score(best_score as i32);
             stats.set_best_tile(best_tile as i32);
+            stats.set_recorded_states(training_stats.replay_buffer_size as i32);
         })
         .unwrap();
 
