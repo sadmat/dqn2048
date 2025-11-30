@@ -137,7 +137,6 @@ impl TrainingOverviewThread {
             let stats = ui.global::<UiTrainingStats>();
 
             stats.set_epoch(training_stats.epochs as i32);
-            // stats.set_epochs_per_second(training_stats.epochs_per_second.unwrap_or(0.0));
             stats.set_best_score(best_score as i32);
             stats.set_best_tile(best_tile as i32);
             stats.set_recorded_states(training_stats.replay_buffer_size as i32);
@@ -168,7 +167,7 @@ impl TrainingOverviewThread {
 
         if self.plots_sizes.score_plot_size != plot_sizes.score_plot_size {
             self.plots_sizes.score_plot_size = plot_sizes.score_plot_size;
-            score_plot = Some(render_plot_u32(
+            score_plot = Some(render_score_plot(
                 "score per epoch",
                 &self.scores,
                 self.plots_sizes.score_plot_size.width as u32,
@@ -177,7 +176,7 @@ impl TrainingOverviewThread {
         }
         if self.plots_sizes.reward_plot_size != plot_sizes.reward_plot_size {
             self.plots_sizes.reward_plot_size = plot_sizes.reward_plot_size;
-            reward_plot = Some(render_plot_f32(
+            reward_plot = Some(render_reward_plot(
                 "reward per epoch",
                 &self.rewards,
                 self.plots_sizes.reward_plot_size.width as u32,
@@ -186,7 +185,7 @@ impl TrainingOverviewThread {
         }
         if self.plots_sizes.best_tile_plot_size != plot_sizes.best_tile_plot_size {
             self.plots_sizes.best_tile_plot_size = plot_sizes.best_tile_plot_size;
-            best_tile_plot = Some(render_plot_u32(
+            best_tile_plot = Some(render_score_plot(
                 "best tile per epoch",
                 &self.best_tiles,
                 self.plots_sizes.best_tile_plot_size.width as u32,
@@ -213,19 +212,19 @@ impl TrainingOverviewThread {
     }
 
     fn update_plots(&self) {
-        let score_plot = render_plot_u32(
+        let score_plot = render_score_plot(
             "score per epoch",
             &self.scores,
             self.plots_sizes.score_plot_size.width as u32,
             self.plots_sizes.score_plot_size.height as u32,
         );
-        let reward_plot = render_plot_f32(
+        let reward_plot = render_reward_plot(
             "reward per epoch",
             &self.rewards,
             self.plots_sizes.reward_plot_size.width as u32,
             self.plots_sizes.reward_plot_size.height as u32,
         );
-        let best_tile_plot = render_plot_u32(
+        let best_tile_plot = render_best_tile_plot(
             "best tile per epoch",
             &self.best_tiles,
             self.plots_sizes.best_tile_plot_size.width as u32,
@@ -245,8 +244,7 @@ impl TrainingOverviewThread {
     }
 }
 
-// TODO: generic parameter
-fn render_plot_u32(
+fn render_score_plot(
     caption: &str,
     values: &[u32],
     width: u32,
@@ -280,7 +278,7 @@ fn render_plot_u32(
     pixel_buffer
 }
 
-fn render_plot_f32(
+fn render_reward_plot(
     caption: &str,
     values: &[f32],
     width: u32,
@@ -309,6 +307,42 @@ fn render_plot_f32(
     chart.configure_mesh().draw().unwrap();
 
     let points = values.iter().enumerate().map(|(i, x)| (i, *x));
+
+    chart.draw_series(LineSeries::new(points, RED)).unwrap();
+
+    drop(chart);
+    drop(root);
+
+    pixel_buffer
+}
+
+fn render_best_tile_plot(
+    caption: &str,
+    values: &[u32],
+    width: u32,
+    height: u32,
+) -> SharedPixelBuffer<Rgb8Pixel> {
+    let x_axis_length = values.len().max(width as usize);
+
+    let mut pixel_buffer = SharedPixelBuffer::new(width, height);
+    let backend = BitMapBackend::with_buffer(pixel_buffer.make_mut_bytes(), (width, height));
+
+    let root = backend.into_drawing_area();
+    root.fill(&WHITE).unwrap();
+
+    let mut chart = ChartBuilder::on(&root)
+        .caption(caption, ("sans-serif", 20))
+        .margin(8)
+        .x_label_area_size(20)
+        .y_label_area_size(30)
+        .build_cartesian_2d(0..x_axis_length, 0..(values.iter().max().unwrap_or(&0).ilog2() + 1))
+        .expect("failed to build chart");
+
+    chart.configure_mesh()
+        .y_label_formatter(&|y| format!("{}", 2_i32.pow(*y)))
+        .draw().unwrap();
+
+    let points = values.iter().enumerate().map(|(i, x)| (i, x.ilog2()));
 
     chart.draw_series(LineSeries::new(points, RED)).unwrap();
 

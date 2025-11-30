@@ -84,10 +84,10 @@ impl<R: GameRng> Board<R> {
 impl Direction {
     fn mirrored_horizontally(&self) -> Self {
         match self {
-            Direction::Up => Direction::Down,
-            Direction::Down => Direction::Up,
-            Direction::Left => Direction::Left,
-            Direction::Right => Direction::Right,
+            Direction::Up => Direction::Up,
+            Direction::Down => Direction::Down,
+            Direction::Left => Direction::Right,
+            Direction::Right => Direction::Left,
         }
     }
 
@@ -248,10 +248,10 @@ mod tests {
             Direction::Right,
         ];
         let mirrored_directions = [
-            Direction::Down,
             Direction::Up,
-            Direction::Left,
+            Direction::Down,
             Direction::Right,
+            Direction::Left,
         ];
         for (original, mirrored) in original_directions.into_iter().zip(mirrored_directions) {
             assert_eq!(original.mirrored_horizontally(), mirrored);

@@ -29,7 +29,7 @@ pub(crate) struct Hyperparameters {
 impl Hyperparameters {
     pub(crate) fn new() -> Self {
         Hyperparameters {
-            learning_rate: 0.0001,
+            learning_rate: 0.001,
             discount_factor: 0.99,
             exploration_rate: 0.05,
             batch_size: 128,
