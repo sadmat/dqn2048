@@ -25,6 +25,7 @@ pub(crate) struct Hyperparameters {
     pub discount_factor: f32,
     pub exploration_rate: f32,
     pub batch_size: usize,
+    pub replay_buffer_capacity: usize,
 }
 
 impl Hyperparameters {
@@ -34,6 +35,7 @@ impl Hyperparameters {
             discount_factor: 0.99,
             exploration_rate: 0.05,
             batch_size: 32,
+            replay_buffer_capacity: 1_000_000,
         }
     }
 }
@@ -72,10 +74,12 @@ where
         data_augmenter: D,
         device: Device<B>,
     ) -> Trainer<B, M, S, C, R, D> {
+        let replay_buffer_capacity = config.replay_buffer_capacity;
+
         Trainer {
             config,
             critic: critic,
-            replay_buffer: ReplayBuffer::new(data_augmenter),
+            replay_buffer: ReplayBuffer::new(data_augmenter, replay_buffer_capacity),
             optimizer: AdamConfig::new().init(),
             device: device,
             stats_recorder: Default::default(),

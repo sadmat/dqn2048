@@ -1,4 +1,6 @@
+use std::collections::VecDeque;
 use burn::prelude::Backend;
+use rand::Rng;
 use rand::seq::IndexedRandom;
 
 use crate::dqn::{state::StateType, training_batch::TrainingBatch};
@@ -6,19 +8,27 @@ use crate::dqn::data_augmenter::DataAugmenterType;
 
 pub struct ReplayBuffer<S: StateType, D: DataAugmenterType<State = S>> {
     data_augmenter: D,
-    transitions: Vec<StateTransition<S>>,
+    transitions: VecDeque<StateTransition<S>>,
+    capacity: usize,
 }
 
 impl<S: StateType, D: DataAugmenterType<State = S>> ReplayBuffer<S, D> {
-    pub fn new(data_augmenter: D) -> Self {
+    pub fn new(data_augmenter: D, capacity: usize) -> Self {
         ReplayBuffer {
             data_augmenter,
-            transitions: Vec::new(),
+            transitions: VecDeque::new(),
+            capacity,
         }
     }
 
     pub fn store(&mut self, transition: StateTransition<S>) {
-        self.transitions.extend(self.data_augmenter.augment(transition));
+        let new_transitions = self.data_augmenter.augment(transition);
+
+        while self.transitions.len() + new_transitions.len() > self.capacity {
+            self.transitions.pop_front();
+        }
+
+        self.transitions.extend(new_transitions);
     }
 
     pub fn size(&self) -> usize {
@@ -26,10 +36,13 @@ impl<S: StateType, D: DataAugmenterType<State = S>> ReplayBuffer<S, D> {
     }
 
     pub fn sample<B: Backend>(&self, batch_size: usize) -> TrainingBatch<B> {
-        self.transitions
-            .choose_multiple(&mut rand::rng(), batch_size)
-            .collect::<Vec<_>>()
-            .into()
+        let mut rng = rand::rng();
+        let mut batch = Vec::with_capacity(batch_size);
+        for _ in 0..batch_size {
+            let index = rng.random_range(0..self.transitions.len());
+            batch.push(&self.transitions[index]);
+        }
+        batch.into()
     }
 }
 
