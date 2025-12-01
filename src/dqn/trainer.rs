@@ -8,6 +8,7 @@ use burn::{
     optim::{Adam, AdamConfig, GradientsParams, Optimizer, adaptor::OptimizerAdaptor},
     tensor::{Device, TensorData, backend::AutodiffBackend},
 };
+use burn::nn::loss::HuberLoss;
 use rand::{distr::uniform::SampleRange, rng, rngs::ThreadRng, seq::IndexedRandom, thread_rng};
 
 use crate::dqn::data_augmenter::DataAugmenterType;
@@ -32,7 +33,7 @@ impl Hyperparameters {
             learning_rate: 0.001,
             discount_factor: 0.99,
             exploration_rate: 0.05,
-            batch_size: 128,
+            batch_size: 32,
         }
     }
 }
@@ -81,8 +82,7 @@ where
         }
     }
 
-    pub fn run_epoch(&mut self, model: M) -> (M, R::Stats) {
-        let huber_loss = HuberLossConfig::new(1.0).init();
+    pub fn run_epoch(&mut self, mut model: M) -> (M, R::Stats) {
         let mut state = S::initial_state();
 
         self.stats_recorder.record_new_epoch();
@@ -94,14 +94,22 @@ where
             self.replay_buffer.store(transition);
             state = next_state;
             self.stats_recorder.record_reward(reward);
+
+            if self.replay_buffer.size() >= self.config.batch_size {
+                model = self.training_step(model);
+            }
         }
         self.stats_recorder.record_final_state(&state);
         self.stats_recorder
             .record_replay_buffer_size(self.replay_buffer.size());
 
-        if self.replay_buffer.size() < self.config.batch_size {
-            return (model, self.stats_recorder.stats());
-        }
+        let stats = self.stats_recorder.stats();
+
+        (model, stats)
+    }
+
+    fn training_step(&mut self, model: M) -> M {
+        let huber_loss = HuberLossConfig::new(1.0).init();
 
         let batch = self.replay_buffer.sample(self.config.batch_size);
         let output = model.forward(batch.states);
@@ -124,9 +132,7 @@ where
         let model = self
             .optimizer
             .step(self.config.learning_rate as f64, model, grads);
-        let stats = self.stats_recorder.stats();
-
-        (model, stats)
+        model
     }
 
     fn pick_action(&self, state: &S, model: &M) -> S::Action {
