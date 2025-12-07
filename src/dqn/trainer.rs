@@ -1,15 +1,13 @@
-use std::default::Default;
-use std::{cmp::Ordering, f32::NEG_INFINITY};
-
 use burn::{
-    Tensor,
     module::AutodiffModule,
     nn::loss::{HuberLossConfig, Reduction::Auto},
-    optim::{Adam, AdamConfig, GradientsParams, Optimizer, adaptor::OptimizerAdaptor},
-    tensor::{Device, TensorData, backend::AutodiffBackend},
+    optim::{adaptor::OptimizerAdaptor, Adam, AdamConfig, GradientsParams, Optimizer},
+    tensor::{backend::AutodiffBackend, Device, TensorData},
+    Tensor,
 };
-use burn::nn::loss::HuberLoss;
-use rand::{distr::uniform::SampleRange, rng, rngs::ThreadRng, seq::IndexedRandom, thread_rng};
+use rand::{distr::uniform::SampleRange, rng, rngs::ThreadRng, seq::IndexedRandom};
+use std::default::Default;
+use std::{cmp::Ordering, f32::NEG_INFINITY};
 
 use crate::dqn::data_augmenter::DataAugmenterType;
 use crate::dqn::stats::StatsRecorderType;
@@ -23,9 +21,11 @@ use crate::dqn::{
 pub(crate) struct Hyperparameters {
     pub learning_rate: f32,
     pub discount_factor: f32,
-    pub exploration_rate: f32,
     pub batch_size: usize,
     pub replay_buffer_capacity: usize,
+    pub initial_epsilon: f64,
+    pub epsilon_decay_frames: i32,
+    pub min_epsilon: f64,
 }
 
 impl Hyperparameters {
@@ -33,9 +33,11 @@ impl Hyperparameters {
         Hyperparameters {
             learning_rate: 0.001,
             discount_factor: 0.99,
-            exploration_rate: 0.05,
             batch_size: 32,
-            replay_buffer_capacity: 1_000_000,
+            replay_buffer_capacity: 5_000_000,
+            initial_epsilon: 0.1,
+            epsilon_decay_frames: 5000,
+            min_epsilon: 0.0001,
         }
     }
 }
@@ -56,6 +58,7 @@ where
     optimizer: OptimizerAdaptor<Adam, M, B>,
     device: Device<B>,
     stats_recorder: R,
+    epoch_num: usize,
 }
 
 impl<B, M, S, C, R, D> Trainer<B, M, S, C, R, D>
@@ -83,15 +86,24 @@ where
             optimizer: AdamConfig::new().init(),
             device: device,
             stats_recorder: Default::default(),
+            epoch_num: 0,
         }
     }
 
     pub fn run_epoch(&mut self, mut model: M) -> (M, R::Stats) {
         let mut state = S::initial_state();
+        self.epoch_num += 1;
+        let epsilon = f64::max(
+            self.config.min_epsilon,
+            self.config.initial_epsilon
+                * (self.config.epsilon_decay_frames - self.epoch_num as i32) as f64
+                / self.config.epsilon_decay_frames as f64,
+        );
 
         self.stats_recorder.record_new_epoch();
+        self.stats_recorder.record_epsilon(epsilon);
         while !state.is_terminal() {
-            let action = self.pick_action(&state, &model);
+            let action = self.pick_action(&state, &model, epsilon);
             let next_state = state.advance(&action);
             let reward = self.critic.reward(&state, &action, &next_state);
             let transition = StateTransition::new(state, action, reward, next_state.clone());
@@ -139,9 +151,9 @@ where
         model
     }
 
-    fn pick_action(&self, state: &S, model: &M) -> S::Action {
+    fn pick_action(&self, state: &S, model: &M, epsilon: f64) -> S::Action {
         let mut rng = rng();
-        if (0.0..=1.0).sample_single(&mut rng).unwrap() <= self.config.exploration_rate {
+        if (0.0..=1.0).sample_single(&mut rng).unwrap() <= epsilon {
             self.pick_random_action(state, &mut rng)
         } else {
             self.pick_best_action(state, model)

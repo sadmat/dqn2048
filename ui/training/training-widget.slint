@@ -36,6 +36,7 @@ export component TrainingWidget inherits Rectangle {
     in property <int> best-score;
     in property <int> best-tile;
     in property <int> recorded-transitions;
+    in property <float> epsilon;
     in property <image> score-plot;
     in property <image> reward-plot;
     in property <image> best-tile-plot;
@@ -124,6 +125,11 @@ export component TrainingWidget inherits Rectangle {
             StatWidget {
                 name: "recorded moves";
                 value: recorded-transitions;
+            }
+
+            StatWidget {
+                name: "epsilon";
+                value: epsilon.to-fixed(4);
             }
 
             Rectangle { }

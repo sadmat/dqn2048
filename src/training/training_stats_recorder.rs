@@ -9,6 +9,7 @@ pub(crate) struct TrainingStats {
     pub last_epoch_score: u32,
     pub best_tile: u32,
     pub replay_buffer_size: usize,
+    pub epsilon: f64,
 }
 
 #[derive(Default)]
@@ -18,6 +19,7 @@ pub(crate) struct TrainingStatsRecorder {
     last_epoch_score: u32,
     best_tile: u32,
     replay_buffer_size: usize,
+    epsilon: f64,
 }
 
 impl StatsRecorderType for TrainingStatsRecorder {
@@ -29,6 +31,7 @@ impl StatsRecorderType for TrainingStatsRecorder {
         self.reward_accumulator = 0.0;
         self.last_epoch_score = 0;
         self.best_tile = 0;
+        self.epsilon = 0.0;
     }
 
     fn record_reward(&mut self, reward: f32) {
@@ -43,6 +46,9 @@ impl StatsRecorderType for TrainingStatsRecorder {
     fn record_replay_buffer_size(&mut self, size: usize) {
         self.replay_buffer_size = size;
     }
+    fn record_epsilon(&mut self, epsilon: f64) {
+        self.epsilon = epsilon;
+    }
 
     fn stats(&self) -> Self::Stats {
         TrainingStats {
@@ -51,7 +57,7 @@ impl StatsRecorderType for TrainingStatsRecorder {
             last_epoch_score: self.last_epoch_score,
             best_tile: self.best_tile,
             replay_buffer_size: self.replay_buffer_size,
+            epsilon: self.epsilon,
         }
     }
 }
-

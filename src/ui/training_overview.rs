@@ -1,17 +1,16 @@
 use plotters::prelude::*;
-use slint::{ComponentHandle, Image, Rgb8Pixel, SharedPixelBuffer, Timer, TimerMode, Weak};
+use slint::{ComponentHandle, Image, Rgb8Pixel, SharedPixelBuffer, Weak};
 
 use crate::{
-    AppWindow, PlotSize, Plots, UiTrainingStats,
-    training::{training_stats_recorder::TrainingStats, types::TrainingState},
+    training::{training_stats_recorder::TrainingStats, types::TrainingState}, AppWindow, PlotSize, Plots,
+    UiTrainingStats,
 };
 
+use std::sync::{Arc, Mutex};
 use std::{
     sync::mpsc::*,
     thread::{self, JoinHandle},
 };
-use std::sync::{Arc, Mutex};
-use std::time::Duration;
 
 #[derive(Default)]
 pub(crate) struct PlotsSizes {
@@ -75,7 +74,11 @@ pub(crate) struct TrainingOverviewThread {
 impl TrainingOverviewThread {
     pub(crate) fn spawn_thread(
         ui_handle: Weak<AppWindow>,
-    ) -> (Sender<TrainingOverviewUpdate>, JoinHandle<()>, Arc<Mutex<u32>>) {
+    ) -> (
+        Sender<TrainingOverviewUpdate>,
+        JoinHandle<()>,
+        Arc<Mutex<u32>>,
+    ) {
         let (tx, rx) = channel();
         let mut thread = Self::new(ui_handle);
         let epochs_per_second = thread.epoch_per_second_counter.clone();
@@ -140,6 +143,7 @@ impl TrainingOverviewThread {
             stats.set_best_score(best_score as i32);
             stats.set_best_tile(best_tile as i32);
             stats.set_recorded_states(training_stats.replay_buffer_size as i32);
+            stats.set_epsilon(training_stats.epsilon as f32);
         })
         .unwrap();
 
@@ -335,12 +339,17 @@ fn render_best_tile_plot(
         .margin(8)
         .x_label_area_size(20)
         .y_label_area_size(30)
-        .build_cartesian_2d(0..x_axis_length, 0..(values.iter().max().unwrap_or(&0).ilog2() + 1))
+        .build_cartesian_2d(
+            0..x_axis_length,
+            0..(values.iter().max().unwrap_or(&0).ilog2() + 1),
+        )
         .expect("failed to build chart");
 
-    chart.configure_mesh()
+    chart
+        .configure_mesh()
         .y_label_formatter(&|y| format!("{}", 2_i32.pow(*y)))
-        .draw().unwrap();
+        .draw()
+        .unwrap();
 
     let points = values.iter().enumerate().map(|(i, x)| (i, x.ilog2()));
 
