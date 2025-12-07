@@ -16,6 +16,8 @@ use burn::backend::Autodiff;
 use burn::backend::Cuda;
 #[cfg(feature = "rocm")]
 use burn::backend::Rocm;
+#[cfg(feature = "wgpu")]
+use burn::backend::Wgpu;
 use plotters::prelude::*;
 use slint::{Image, Rgb8Pixel, SharedPixelBuffer, Timer, quit_event_loop, Weak, TimerMode};
 use std::error::Error;
@@ -30,6 +32,8 @@ fn main() -> Result<(), Box<dyn Error>> {
     let (actions_tx, messages_rx, _) = TrainingThread::<Autodiff<Rocm>>::spawn_thread();
     #[cfg(feature = "cuda")]
     let (actions_tx, messages_rx, _) = TrainingThread::<Autodiff<Cuda>>::spawn_thread();
+    #[cfg(feature = "wgpu")]
+    let (actions_tx, messages_rx, _) = TrainingThread::<Autodiff<Wgpu>>::spawn_thread();
 
     let ui = AppWindow::new()?;
     let ui_handle = ui.as_weak();

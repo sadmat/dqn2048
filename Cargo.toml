@@ -15,6 +15,7 @@ slint = "1.12.1"
 slint-build = "1.12.1"
 
 [features]
-default = ["cuda"]
+default = ["wgpu"]
 rocm = ["burn/rocm"]
 cuda = ["burn/cuda"]
+wgpu = ["burn/wgpu"]
