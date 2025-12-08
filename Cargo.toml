@@ -15,7 +15,13 @@ slint = "1.12.1"
 slint-build = "1.12.1"
 
 [features]
-default = ["wgpu"]
+default = ["cuda"]
 rocm = ["burn/rocm"]
 cuda = ["burn/cuda"]
 wgpu = ["burn/wgpu"]
+
+[profile.profiling]
+inherits = "dev"
+opt-level = 3
+debug = true
+

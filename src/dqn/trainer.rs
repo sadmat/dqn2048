@@ -34,7 +34,8 @@ impl Hyperparameters {
             learning_rate: 0.001,
             discount_factor: 0.99,
             batch_size: 32,
-            replay_buffer_capacity: 5_000_000,
+            // replay_buffer_capacity: 5_000_000,
+            replay_buffer_capacity: 10_000,
             initial_epsilon: 0.1,
             epsilon_decay_frames: 5000,
             min_epsilon: 0.0001,
@@ -59,6 +60,7 @@ where
     device: Device<B>,
     stats_recorder: R,
     epoch_num: usize,
+    loss_fn: HuberLoss,
 }
 
 impl<B, M, S, C, R, D> Trainer<B, M, S, C, R, D>
@@ -87,6 +89,7 @@ where
             device: device,
             stats_recorder: Default::default(),
             epoch_num: 0,
+            loss_fn: HuberLossConfig::new(1.0).init(),
         }
     }
 
@@ -125,14 +128,12 @@ where
     }
 
     fn training_step(&mut self, model: M) -> M {
-        let huber_loss = HuberLossConfig::new(1.0).init();
-
-        let batch = self.replay_buffer.sample(self.config.batch_size);
-        let output = model.forward(batch.states);
+        let batch = self.replay_buffer.sample::<B::InnerBackend>(self.config.batch_size);
+        let output = model.forward(Tensor::from_inner(batch.states).detach());
         let qvalues: Tensor<B, 1> = output
-            .gather(1, batch.actions.unsqueeze_dim(1))
+            .gather(1, Tensor::from_inner(batch.actions.unsqueeze_dim(1)))
             .squeeze_dim(1);
-        let target_qvalues = model
+        let target_qvalues = model.valid()
             .forward(batch.next_states)
             .detach()
             .mask_fill(batch.invalid_actions_mask, NEG_INFINITY)
@@ -140,8 +141,9 @@ where
             .squeeze_dim(1);
         let target_qvalues = batch.rewards
             - (batch.is_terminal - 1.0) * self.config.discount_factor * target_qvalues;
+        let target_qvalues = Tensor::from_inner(target_qvalues).detach();
 
-        let loss = huber_loss.forward(qvalues, target_qvalues, Auto);
+        let loss = self.loss_fn.forward(qvalues, target_qvalues, Auto);
         let grads = loss.backward();
         let grads = GradientsParams::from_grads(grads, &model);
 

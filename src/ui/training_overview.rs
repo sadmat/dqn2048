@@ -165,6 +165,7 @@ impl TrainingOverviewThread {
     }
 
     fn handle_plot_size_change(&mut self, plot_sizes: PlotsSizes) {
+        return;
         let mut score_plot = None;
         let mut reward_plot = None;
         let mut best_tile_plot = None;
@@ -216,6 +217,7 @@ impl TrainingOverviewThread {
     }
 
     fn update_plots(&self) {
+        return;
         let score_plot = render_score_plot(
             "score per epoch",
             &self.scores,
