@@ -3,20 +3,20 @@ use crate::dqn::{replay_buffer::StateTransition, state::StateType};
 use burn::prelude::TensorData;
 use burn::{
     Tensor,
-    prelude::Backend,
     tensor::{Bool, Float, Int},
 };
+use burn::tensor::backend::AutodiffBackend;
 
-pub struct TrainingBatch<B: Backend> {
+pub struct TrainingBatch<B: AutodiffBackend> {
     pub states: Tensor<B, 2, Float>,
     pub actions: Tensor<B, 1, Int>,
-    pub invalid_actions_mask: Tensor<B, 2, Bool>,
-    pub rewards: Tensor<B, 1, Float>,
-    pub next_states: Tensor<B, 2, Float>,
-    pub is_terminal: Tensor<B, 1, Float>,
+    pub invalid_actions_mask: Tensor<B::InnerBackend, 2, Bool>,
+    pub rewards: Tensor<B::InnerBackend, 1, Float>,
+    pub next_states: Tensor<B::InnerBackend, 2, Float>,
+    pub is_terminal: Tensor<B::InnerBackend, 1, Float>,
 }
 
-impl<B: Backend, S: StateType> From<Vec<&StateTransition<S>>> for TrainingBatch<B> {
+impl<B: AutodiffBackend, S: StateType> From<Vec<&StateTransition<S>>> for TrainingBatch<B> {
     fn from(records: Vec<&StateTransition<S>>) -> Self {
         let batch_size = records.len();
         let mut states: Vec<f32> = Vec::with_capacity(batch_size * S::num_features());
@@ -53,7 +53,7 @@ impl<B: Backend, S: StateType> From<Vec<&StateTransition<S>>> for TrainingBatch<
         let device = B::Device::default();
 
         TrainingBatch {
-            states: Tensor::from_data(states, &device),
+            states: Tensor::from_data(states, &device).detach(),
             actions: Tensor::from_data(actions, &device),
             invalid_actions_mask: Tensor::from_data(invalid_actions_mask, &device),
             rewards: Tensor::from_data(rewards, &device),

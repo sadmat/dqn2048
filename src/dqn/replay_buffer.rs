@@ -1,5 +1,5 @@
 use std::collections::VecDeque;
-use burn::prelude::Backend;
+use burn::tensor::backend::AutodiffBackend;
 use rand::Rng;
 use rand::seq::IndexedRandom;
 
@@ -35,7 +35,7 @@ impl<S: StateType, D: DataAugmenterType<State = S>> ReplayBuffer<S, D> {
         self.transitions.len()
     }
 
-    pub fn sample<B: Backend>(&self, batch_size: usize) -> TrainingBatch<B> {
+    pub fn sample<B: AutodiffBackend>(&self, batch_size: usize) -> TrainingBatch<B> {
         let mut rng = rand::rng();
         let mut batch = Vec::with_capacity(batch_size);
         for _ in 0..batch_size {

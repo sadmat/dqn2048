@@ -8,7 +8,6 @@ use burn::{
 use rand::{distr::uniform::SampleRange, rng, rngs::ThreadRng, seq::IndexedRandom};
 use std::default::Default;
 use std::{cmp::Ordering, f32::NEG_INFINITY};
-
 use crate::dqn::data_augmenter::DataAugmenterType;
 use crate::dqn::stats::StatsRecorderType;
 use crate::dqn::{
@@ -132,14 +131,14 @@ where
         let qvalues: Tensor<B, 1> = output
             .gather(1, batch.actions.unsqueeze_dim(1))
             .squeeze_dim(1);
-        let target_qvalues = model
+        let target_qvalues = model.valid()
             .forward(batch.next_states)
-            .detach()
             .mask_fill(batch.invalid_actions_mask, NEG_INFINITY)
             .max_dim(1)
             .squeeze_dim(1);
         let target_qvalues = batch.rewards
-            - (batch.is_terminal - 1.0) * self.config.discount_factor * target_qvalues;
+            + (1.0 - batch.is_terminal) * self.config.discount_factor * target_qvalues;
+        let target_qvalues = Tensor::from_inner(target_qvalues).detach();
 
         let loss = huber_loss.forward(qvalues, target_qvalues, Auto);
         let grads = loss.backward();
