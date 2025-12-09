@@ -15,6 +15,7 @@ use std::{
 #[derive(Default)]
 pub(crate) struct PlotsSizes {
     pub score_plot_size: PlotSize,
+    pub epoch_legth_plot_size: PlotSize,
     pub reward_plot_size: PlotSize,
     pub best_tile_plot_size: PlotSize,
 }
@@ -22,11 +23,13 @@ pub(crate) struct PlotsSizes {
 impl PlotsSizes {
     pub(crate) fn new(
         score_plot_size: PlotSize,
+        epoch_legth_plot_size: PlotSize,
         reward_plot_size: PlotSize,
         best_tile_plot_size: PlotSize,
     ) -> PlotsSizes {
         Self {
             score_plot_size,
+            epoch_legth_plot_size,
             reward_plot_size,
             best_tile_plot_size,
         }
@@ -35,7 +38,11 @@ impl PlotsSizes {
     pub(crate) fn from(area_size: PlotSize) -> PlotsSizes {
         let spacing = 8;
         let score = PlotSize {
-            width: area_size.width,
+            width: (area_size.width - spacing) / 2,
+            height: (area_size.height - spacing) / 2,
+        };
+        let epoch_legth = PlotSize {
+            width: (area_size.width - spacing) / 2,
             height: (area_size.height - spacing) / 2,
         };
         let reward = PlotSize {
@@ -48,6 +55,7 @@ impl PlotsSizes {
         };
         PlotsSizes {
             score_plot_size: score,
+            epoch_legth_plot_size: epoch_legth,
             reward_plot_size: reward,
             best_tile_plot_size: best_tile,
         }
@@ -63,6 +71,7 @@ pub(crate) enum TrainingOverviewUpdate {
 pub(crate) struct TrainingOverviewThread {
     ui_handle: Weak<AppWindow>,
     scores: Vec<u32>,
+    epoch_length: Vec<u32>,
     rewards: Vec<f32>,
     best_tiles: Vec<u32>,
     best_score: u32,
@@ -94,6 +103,7 @@ impl TrainingOverviewThread {
         Self {
             ui_handle,
             scores: Vec::new(),
+            epoch_length: Vec::new(),
             rewards: Vec::new(),
             best_tiles: Vec::new(),
             best_score: 0,
@@ -125,6 +135,7 @@ impl TrainingOverviewThread {
 
     fn handle_new_epoch_stats(&mut self, training_stats: TrainingStats) {
         self.scores.push(training_stats.last_epoch_score);
+        self.epoch_length.push(training_stats.last_epoch_length);
         self.rewards.push(training_stats.cumulated_epoch_rewards);
         self.best_tiles.push(training_stats.best_tile);
         self.best_score = self.best_score.max(training_stats.last_epoch_score);
@@ -166,6 +177,7 @@ impl TrainingOverviewThread {
 
     fn handle_plot_size_change(&mut self, plot_sizes: PlotsSizes) {
         let mut score_plot = None;
+        let mut epoch_length_plot = None;
         let mut reward_plot = None;
         let mut best_tile_plot = None;
 
@@ -176,6 +188,15 @@ impl TrainingOverviewThread {
                 &self.scores,
                 self.plots_sizes.score_plot_size.width as u32,
                 self.plots_sizes.score_plot_size.height as u32,
+            ));
+        }
+        if self.plots_sizes.epoch_legth_plot_size != plot_sizes.epoch_legth_plot_size {
+            self.plots_sizes.epoch_legth_plot_size = plot_sizes.epoch_legth_plot_size;
+            epoch_length_plot = Some(render_score_plot(
+                "game length per epoch",
+                &self.epoch_length,
+                self.plots_sizes.epoch_legth_plot_size.width as u32,
+                self.plots_sizes.epoch_legth_plot_size.height as u32,
             ));
         }
         if self.plots_sizes.reward_plot_size != plot_sizes.reward_plot_size {
@@ -205,6 +226,9 @@ impl TrainingOverviewThread {
             if let Some(score_plot) = score_plot {
                 plots.set_score_plot(Image::from_rgb8(score_plot));
             }
+            if let Some(epoch_length_plot) = epoch_length_plot {
+                plots.set_epoch_length_plot(Image::from_rgb8(epoch_length_plot));
+            }
             if let Some(reward_plot) = reward_plot {
                 plots.set_reward_plot(Image::from_rgb8(reward_plot));
             }
@@ -221,6 +245,12 @@ impl TrainingOverviewThread {
             &self.scores,
             self.plots_sizes.score_plot_size.width as u32,
             self.plots_sizes.score_plot_size.height as u32,
+        );
+        let epoch_length_plot = render_score_plot(
+            "game length per epoch",
+            &self.epoch_length,
+            self.plots_sizes.epoch_legth_plot_size.width as u32,
+            self.plots_sizes.epoch_legth_plot_size.height as u32,
         );
         let reward_plot = render_reward_plot(
             "reward per epoch",
@@ -241,6 +271,7 @@ impl TrainingOverviewThread {
             let plots = ui.global::<Plots>();
 
             plots.set_score_plot(Image::from_rgb8(score_plot));
+            plots.set_epoch_length_plot(Image::from_rgb8(epoch_length_plot));
             plots.set_reward_plot(Image::from_rgb8(reward_plot));
             plots.set_best_tile_plot(Image::from_rgb8(best_tile_plot));
         })

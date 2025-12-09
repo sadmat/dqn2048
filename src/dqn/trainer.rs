@@ -91,6 +91,7 @@ where
 
     pub fn run_epoch(&mut self, mut model: M) -> (M, R::Stats) {
         let mut state = S::initial_state();
+        let mut epoch_frames = 0;
         self.epoch_num += 1;
         let epsilon = f64::max(
             self.config.min_epsilon,
@@ -109,12 +110,13 @@ where
             self.replay_buffer.store(transition);
             state = next_state;
             self.stats_recorder.record_reward(reward);
+            epoch_frames += 1;
 
             if self.replay_buffer.size() >= self.config.batch_size {
                 model = self.training_step(model);
             }
         }
-        self.stats_recorder.record_final_state(&state);
+        self.stats_recorder.record_final_state(&state, epoch_frames);
         self.stats_recorder
             .record_replay_buffer_size(self.replay_buffer.size());
 
