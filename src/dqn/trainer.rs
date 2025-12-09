@@ -25,18 +25,20 @@ pub(crate) struct Hyperparameters {
     pub initial_epsilon: f64,
     pub epsilon_decay_frames: i32,
     pub min_epsilon: f64,
+    pub training_frequency: usize,
 }
 
 impl Hyperparameters {
     pub(crate) fn new() -> Self {
         Hyperparameters {
-            learning_rate: 0.001,
+            learning_rate: 0.00025,
             discount_factor: 0.99,
-            batch_size: 32,
+            batch_size: 5 * 1024,
             replay_buffer_capacity: 5_000_000,
             initial_epsilon: 0.1,
             epsilon_decay_frames: 5000,
             min_epsilon: 0.0001,
+            training_frequency: 25,
         }
     }
 }
@@ -58,6 +60,7 @@ where
     device: Device<B>,
     stats_recorder: R,
     epoch_num: usize,
+    frame_num: usize,
 }
 
 impl<B, M, S, C, R, D> Trainer<B, M, S, C, R, D>
@@ -86,6 +89,7 @@ where
             device: device,
             stats_recorder: Default::default(),
             epoch_num: 0,
+            frame_num: 0,
         }
     }
 
@@ -103,6 +107,7 @@ where
         self.stats_recorder.record_new_epoch();
         self.stats_recorder.record_epsilon(epsilon);
         while !state.is_terminal() {
+            self.frame_num += 1;
             let action = self.pick_action(&state, &model, epsilon);
             let next_state = state.advance(&action);
             let reward = self.critic.reward(&state, &action, &next_state);
@@ -112,7 +117,7 @@ where
             self.stats_recorder.record_reward(reward);
             epoch_frames += 1;
 
-            if self.replay_buffer.size() >= self.config.batch_size {
+            if self.replay_buffer.size() >= self.config.batch_size && self.frame_num % self.config.training_frequency == 0 {
                 model = self.training_step(model);
             }
         }
