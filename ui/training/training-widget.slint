@@ -7,7 +7,7 @@ import {
 } from "std-widgets.slint";
 import { Style, Colors } from "../styles.slint";
 import { PlotSize } from "../size.slint";
-import { UiTrainingState, Actions } from "../globals.slint";
+import { UiTrainingState, Actions, Formatters } from "../globals.slint";
 
 component StatWidget inherits Rectangle {
     in property <string> name;
@@ -24,7 +24,7 @@ component StatWidget inherits Rectangle {
         }
 
         Text {
-            text: value;
+            text: value.is-empty ? "N/A" : value;
         }
     }
 }
@@ -121,7 +121,7 @@ export component TrainingWidget inherits Rectangle {
 
             StatWidget {
                 name: "epoch";
-                value: epoch;
+                value: Formatters.format-int(epoch);
             }
 
             StatWidget {
@@ -131,7 +131,7 @@ export component TrainingWidget inherits Rectangle {
 
             StatWidget {
                 name: "best score";
-                value: best-score;
+                value: Formatters.format-int(best-score);
             }
 
             StatWidget {
@@ -141,7 +141,7 @@ export component TrainingWidget inherits Rectangle {
 
             StatWidget {
                 name: "recorded moves";
-                value: recorded-transitions;
+                value: Formatters.format-int(recorded-transitions);
             }
 
             StatWidget {

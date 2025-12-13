@@ -24,6 +24,7 @@ use std::error::Error;
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Duration;
+use num_format::{SystemLocale, ToFormattedString};
 
 slint::include_modules!();
 
@@ -78,6 +79,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     start_plots_area_update_timer(ui_handle.clone());
     let _timer = start_epochs_per_second_timer(epochs_per_second, ui_handle.clone());
+    setup_formatters(ui_handle.clone());
 
     ui.run()?;
 
@@ -101,4 +103,13 @@ fn start_epochs_per_second_timer(epochs_per_second: Arc<Mutex<u32>>, ui_handle: 
         *counter = 0;
     });
     timer
+}
+
+fn setup_formatters(ui_handle: Weak<AppWindow>) {
+    let ui = ui_handle.unwrap();
+    let formatters = ui.global::<Formatters>();
+    formatters.on_format_int(|value| {
+        let locale = SystemLocale::default().unwrap();
+        value.to_formatted_string(&locale).into()
+    });
 }
