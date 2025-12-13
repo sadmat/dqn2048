@@ -26,6 +26,7 @@ pub(crate) struct Hyperparameters {
     pub epsilon_decay_frames: i32,
     pub min_epsilon: f64,
     pub training_frequency: usize,
+    pub network_sync_frequency: usize,
 }
 
 impl Hyperparameters {
@@ -35,10 +36,11 @@ impl Hyperparameters {
             discount_factor: 0.99,
             batch_size: 5 * 1024,
             replay_buffer_capacity: 5_000_000,
-            initial_epsilon: 0.05,
+            initial_epsilon: 0.2,
             epsilon_decay_frames: 5000,
             min_epsilon: 0.0001,
             training_frequency: 25,
+            network_sync_frequency: 10000,
         }
     }
 }
@@ -61,6 +63,7 @@ where
     stats_recorder: R,
     epoch_num: usize,
     frame_num: usize,
+    target_network: Option<M>,
 }
 
 impl<B, M, S, C, R, D> Trainer<B, M, S, C, R, D>
@@ -90,10 +93,13 @@ where
             stats_recorder: Default::default(),
             epoch_num: 0,
             frame_num: 0,
+            target_network: None,
         }
     }
 
     pub fn run_epoch(&mut self, mut model: M) -> (M, R::Stats) {
+        // Epoch initialization
+
         let mut state = S::initial_state();
         let mut epoch_frames = 0;
         self.epoch_num += 1;
@@ -103,6 +109,12 @@ where
                 * (self.config.epsilon_decay_frames - self.epoch_num as i32) as f64
                 / self.config.epsilon_decay_frames as f64,
         );
+        if self.target_network.is_none() {
+            self.target_network = Some(model.clone());
+        }
+
+
+        // Epoch loop
 
         self.stats_recorder.record_new_epoch();
         self.stats_recorder.record_epsilon(epsilon);
@@ -120,6 +132,9 @@ where
             if self.replay_buffer.size() >= self.config.batch_size && self.frame_num % self.config.training_frequency == 0 {
                 model = self.training_step(model);
             }
+            if self.frame_num % self.config.network_sync_frequency == 0 {
+                self.target_network = Some(model.clone());
+            }
         }
         self.stats_recorder.record_final_state(&state, epoch_frames);
         self.stats_recorder
@@ -132,13 +147,14 @@ where
 
     fn training_step(&mut self, model: M) -> M {
         let huber_loss = HuberLossConfig::new(1.0).init();
+        let Some(target_network) = self.target_network.as_ref() else { panic!("Target network should've been set by run_epoch()") };
 
         let batch = self.replay_buffer.sample(self.config.batch_size);
         let output = model.forward(batch.states);
         let qvalues: Tensor<B, 1> = output
             .gather(1, batch.actions.unsqueeze_dim(1))
             .squeeze_dim(1);
-        let target_qvalues = model.valid()
+        let target_qvalues = target_network.valid()
             .forward(batch.next_states)
             .mask_fill(batch.invalid_actions_mask, NEG_INFINITY)
             .max_dim(1)
