@@ -35,7 +35,7 @@ impl Hyperparameters {
             discount_factor: 0.99,
             batch_size: 5 * 1024,
             replay_buffer_capacity: 5_000_000,
-            initial_epsilon: 0.1,
+            initial_epsilon: 0.05,
             epsilon_decay_frames: 5000,
             min_epsilon: 0.0001,
             training_frequency: 25,

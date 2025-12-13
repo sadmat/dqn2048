@@ -17,7 +17,7 @@ impl ActionType for Direction {
     }
 }
 
-const NUM_FEATURES: usize = NUM_TILES * 11;
+const NUM_FEATURES: usize = NUM_TILES * 12;
 // const NUM_FEATURES: usize = NUM_TILES;
 
 impl StateType for Board<RealGameRng> {
@@ -75,7 +75,7 @@ impl StateType for Board<RealGameRng> {
         for row in 0..NUM_ROWS {
             for column in 0..NUM_COLUMNS {
                 let tile_value = self.value_at(row, column).unwrap_or_default();
-                let mut inputs = vec![0.0; 11];
+                let mut inputs = vec![0.0; 12];
                 if tile_value > 0 {
                     let index = tile_value.ilog2().min((inputs.len() - 1) as u32) as usize;
                     inputs[index] = 1.0;

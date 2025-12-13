@@ -12,7 +12,7 @@ use crate::dqn::model::Model;
 #[derive(Config, Debug)]
 pub(crate) struct GameModelConfig {
     // #[config(default = "16")]
-    #[config(default = "16 * 11")]
+    #[config(default = "16 * 12")]
     num_inputs: usize,
     #[config(default = "512")]
     hidden1_size: usize,
