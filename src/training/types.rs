@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use crate::training::training_stats_recorder::TrainingStats;
 
 #[derive(Debug, PartialEq)]
@@ -10,6 +12,8 @@ pub(crate) enum TrainingState {
 pub(crate) enum TrainingAction {
     Start,
     Pause,
+    Save(PathBuf),
+    Load(PathBuf),
 }
 
 #[derive(Debug)]

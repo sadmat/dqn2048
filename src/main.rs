@@ -18,13 +18,14 @@ use burn::backend::Cuda;
 use burn::backend::Rocm;
 #[cfg(feature = "wgpu")]
 use burn::backend::Wgpu;
+use num_format::{SystemLocale, ToFormattedString};
 use plotters::prelude::*;
-use slint::{Image, Rgb8Pixel, SharedPixelBuffer, Timer, quit_event_loop, Weak, TimerMode};
+use rfd::FileDialog;
+use slint::{Image, Rgb8Pixel, SharedPixelBuffer, Timer, TimerMode, Weak, quit_event_loop};
 use std::error::Error;
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Duration;
-use num_format::{SystemLocale, ToFormattedString};
 
 slint::include_modules!();
 
@@ -39,7 +40,8 @@ fn main() -> Result<(), Box<dyn Error>> {
     let ui = AppWindow::new()?;
     let ui_handle = ui.as_weak();
 
-    let (updates_tx, _, epochs_per_second) = TrainingOverviewThread::spawn_thread(ui_handle.clone());
+    let (updates_tx, _, epochs_per_second) =
+        TrainingOverviewThread::spawn_thread(ui_handle.clone());
     let _ = TrainingUpdateAdapter::spawn_thread(messages_rx, updates_tx.clone());
 
     let actions = ui.global::<Actions>();
@@ -56,11 +58,23 @@ fn main() -> Result<(), Box<dyn Error>> {
             action_tx.send(TrainingAction::Pause).unwrap();
         }
     });
-    actions.on_save_model(|| {
-        println!("TODO: on_save_model()");
+    actions.on_save_model({
+        let action_tx = actions_tx.clone();
+        move || {
+            let Some(file) = FileDialog::new().save_file() else {
+                return;
+            };
+            action_tx.send(TrainingAction::Save(file)).unwrap();
+        }
     });
-    actions.on_load_model(|| {
-        println!("TODO: on_load_model()");
+    actions.on_load_model({
+        let action_tx = actions_tx.clone();
+        move || {
+            let Some(file) = FileDialog::new().pick_file() else {
+                return;
+            };
+            action_tx.send(TrainingAction::Load(file)).unwrap();
+        }
     });
     actions.on_plots_area_size_changed({
         let ui_handle = ui_handle.clone();
@@ -93,7 +107,10 @@ fn start_plots_area_update_timer(ui_handle: Weak<AppWindow>) {
     });
 }
 
-fn start_epochs_per_second_timer(epochs_per_second: Arc<Mutex<u32>>, ui_handle: Weak<AppWindow>) -> Timer {
+fn start_epochs_per_second_timer(
+    epochs_per_second: Arc<Mutex<u32>>,
+    ui_handle: Weak<AppWindow>,
+) -> Timer {
     let timer = Timer::default();
     timer.start(TimerMode::Repeated, Duration::from_secs(1), move || {
         let mut counter = epochs_per_second.lock().unwrap();
@@ -113,3 +130,4 @@ fn setup_formatters(ui_handle: Weak<AppWindow>) {
         value.to_formatted_string(&locale).into()
     });
 }
+
