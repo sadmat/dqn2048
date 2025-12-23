@@ -5,9 +5,10 @@ pub trait ActionType: Clone {
 pub trait StateType: Clone {
     type Action: ActionType;
 
+    const NUM_ACTIONS: usize;
+    const NUM_FEATURES: usize;
+
     fn initial_state() -> Self;
-    fn num_actions() -> usize;
-    fn num_features() -> usize;
     fn possible_actions(&self) -> Vec<Self::Action>;
     fn advance(&self, action: &Self::Action) -> Self;
     fn is_terminal(&self) -> bool;

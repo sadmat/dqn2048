@@ -17,26 +17,18 @@ impl ActionType for Direction {
     }
 }
 
-const NUM_FEATURES: usize = NUM_TILES * 12;
-// const NUM_FEATURES: usize = NUM_TILES;
-
 impl StateType for Board<RealGameRng> {
     type Action = Direction;
+
+    const NUM_ACTIONS: usize = 4;
+    const NUM_FEATURES: usize = NUM_TILES * 12;
 
     fn initial_state() -> Board<RealGameRng> {
         Board::new()
     }
 
-    fn num_actions() -> usize {
-        4
-    }
-
-    fn num_features() -> usize {
-        NUM_FEATURES
-    }
-
     fn possible_actions(&self) -> Vec<Self::Action> {
-        let mut actions = Vec::with_capacity(Self::num_actions());
+        let mut actions = Vec::with_capacity(Self::NUM_ACTIONS);
 
         if self.can_move_up() {
             actions.push(Direction::Up);
@@ -70,8 +62,8 @@ impl StateType for Board<RealGameRng> {
     }
 
     fn as_features(&self) -> Vec<f32> {
-        // TODO: one_hot tensor?
-        let mut features = Vec::with_capacity(NUM_FEATURES);
+        // TODO: Fill existing buffer instead of creating new one
+        let mut features = Vec::with_capacity(Self::NUM_FEATURES);
         for row in 0..NUM_ROWS {
             for column in 0..NUM_COLUMNS {
                 let tile_value = self.value_at(row, column).unwrap_or_default();
@@ -81,23 +73,6 @@ impl StateType for Board<RealGameRng> {
                     inputs[index] = 1.0;
                 }
                 features.extend(inputs);
-                // #[rustfmt::skip]
-                // let inputs = match tile_value {
-                //     2    => [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0],
-                //     4    => [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0],
-                //     8    => [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0],
-                //     16   => [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0],
-                //     32   => [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0],
-                //     64   => [0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-                //     128  => [0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-                //     256  => [0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-                //     512  => [0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-                //     1024 => [0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-                //     2048 => [1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-                //     _    => [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-                // };
-                // features.extend_from_slice(inputs.as_slice());
-                // features.push(if tile_value == 0 { 0.0 } else { tile_value.ilog2() as f32 });
             }
         }
         features

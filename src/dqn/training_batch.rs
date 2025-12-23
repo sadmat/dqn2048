@@ -19,17 +19,17 @@ pub struct TrainingBatch<B: AutodiffBackend> {
 impl<B: AutodiffBackend, S: StateType> From<Vec<&StateTransition<S>>> for TrainingBatch<B> {
     fn from(records: Vec<&StateTransition<S>>) -> Self {
         let batch_size = records.len();
-        let mut states: Vec<f32> = Vec::with_capacity(batch_size * S::num_features());
+        let mut states: Vec<f32> = Vec::with_capacity(batch_size * S::NUM_FEATURES);
         let mut actions: Vec<i32> = Vec::with_capacity(batch_size);
-        let mut invalid_actions_mask: Vec<bool> = Vec::with_capacity(batch_size * S::num_actions());
+        let mut invalid_actions_mask: Vec<bool> = Vec::with_capacity(batch_size * S::NUM_ACTIONS);
         let mut rewards: Vec<f32> = Vec::with_capacity(batch_size);
-        let mut next_states: Vec<f32> = Vec::with_capacity(batch_size * S::num_features());
+        let mut next_states: Vec<f32> = Vec::with_capacity(batch_size * S::NUM_FEATURES);
         let mut is_terminal: Vec<f32> = Vec::with_capacity(batch_size);
 
         for record in records {
             states.extend_from_slice(record.state.as_features().as_slice());
             actions.push(record.action.index() as i32);
-            let mut invalid_actions = vec![true; S::num_actions()];
+            let mut invalid_actions = vec![true; S::NUM_ACTIONS];
             for valid_action in record.next_state.possible_actions() {
                 invalid_actions[valid_action.index() as usize] = false;
             }
@@ -43,12 +43,12 @@ impl<B: AutodiffBackend, S: StateType> From<Vec<&StateTransition<S>>> for Traini
             });
         }
 
-        let states = TensorData::new(states, [batch_size, S::num_features()]);
+        let states = TensorData::new(states, [batch_size, S::NUM_FEATURES]);
         let actions = TensorData::new(actions, [batch_size]);
         let invalid_actions_mask =
-            TensorData::new(invalid_actions_mask, [batch_size, S::num_actions()]);
+            TensorData::new(invalid_actions_mask, [batch_size, S::NUM_ACTIONS]);
         let rewards = TensorData::new(rewards, [batch_size]);
-        let next_states = TensorData::new(next_states, [batch_size, S::num_features()]);
+        let next_states = TensorData::new(next_states, [batch_size, S::NUM_FEATURES]);
         let is_terminal = TensorData::new(is_terminal, [batch_size]);
         let device = B::Device::default();
 
