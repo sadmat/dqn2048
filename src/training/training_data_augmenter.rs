@@ -2,7 +2,7 @@ use crate::dqn::data_augmenter::DataAugmenterType;
 use crate::dqn::replay_buffer::StateTransition;
 use crate::dqn::state::StateType;
 use crate::game::board::Tile::{Empty, Value};
-use crate::game::board::{Board, Direction, NUM_COLUMNS, NUM_ROWS, NUM_TILES, Tile};
+use crate::game::board::{Board, Direction, Tile, NUM_COLUMNS, NUM_ROWS, NUM_TILES};
 use crate::game::game_rng::{GameRng, RealGameRng};
 
 #[derive(Default)]
@@ -13,41 +13,49 @@ impl DataAugmenterType for TrainingDataAugmenter {
 
     fn augment(
         &self,
-        transition: StateTransition<Self::State>,
-    ) -> Vec<StateTransition<Self::State>> {
-        let mut transition = transition;
-        let mut transitions = vec![transition.clone(), transition.mirrored_horizontally()];
+        state: Self::State,
+        action: <Self::State as StateType>::Action,
+        reward: f32,
+        next_state: Self::State,
+    ) -> Vec<StateTransition> {
+        let mut state = state;
+        let mut action = action;
+        let mut next_state = next_state;
+        let mut transitions = Vec::with_capacity(8);
+
+        transitions.push(StateTransition::new(
+            state.clone(),
+            action,
+            reward,
+            next_state.clone(),
+        ));
+        transitions.push(StateTransition::new(
+            state.mirrored_horizontally(),
+            action.mirrored_horizontally(),
+            reward,
+            next_state.mirrored_horizontally(),
+        ));
 
         for _ in 0..3 {
-            transition = transition.rotated_cw();
-            transitions.push(transition.clone());
-            transitions.push(transition.mirrored_horizontally());
+            state = state.rotated_cw();
+            action = action.rotated_cw();
+            next_state = next_state.rotated_cw();
+
+            transitions.push(StateTransition::new(
+                state.clone(),
+                action,
+                reward,
+                next_state.clone(),
+            ));
+            transitions.push(StateTransition::new(
+                state.mirrored_horizontally(),
+                action.mirrored_horizontally(),
+                reward,
+                next_state.mirrored_horizontally(),
+            ));
         }
 
         transitions
-    }
-}
-
-impl<R: GameRng> StateTransition<Board<R>>
-where
-    Board<R>: StateType<Action = Direction>,
-{
-    fn mirrored_horizontally(&self) -> Self {
-        Self::new(
-            self.state.mirrored_horizontally(),
-            self.action.mirrored_horizontally(),
-            self.reward,
-            self.next_state.mirrored_horizontally(),
-        )
-    }
-
-    fn rotated_cw(&self) -> Self {
-        Self::new(
-            self.state.rotated_cw(),
-            self.action.rotated_cw(),
-            self.reward,
-            self.next_state.rotated_cw(),
-        )
     }
 }
 
@@ -105,7 +113,7 @@ impl Direction {
 mod tests {
     use super::*;
     use crate::game::board::Tile::{Empty, Value};
-    use crate::game::board::{Direction, NUM_TILES, Tile};
+    use crate::game::board::{Direction, Tile, NUM_TILES};
 
     #[test]
     fn board_mirroring() {

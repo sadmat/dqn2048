@@ -5,10 +5,11 @@ use rand::seq::IndexedRandom;
 
 use crate::dqn::{state::StateType, training_batch::TrainingBatch};
 use crate::dqn::data_augmenter::DataAugmenterType;
+use crate::dqn::state::ActionType;
 
 pub struct ReplayBuffer<S: StateType, D: DataAugmenterType<State = S>> {
     data_augmenter: D,
-    transitions: VecDeque<StateTransition<S>>,
+    transitions: VecDeque<StateTransition>,
     capacity: usize,
 }
 
@@ -21,8 +22,8 @@ impl<S: StateType, D: DataAugmenterType<State = S>> ReplayBuffer<S, D> {
         }
     }
 
-    pub fn store(&mut self, transition: StateTransition<S>) {
-        let new_transitions = self.data_augmenter.augment(transition);
+    pub fn store(&mut self, state: S, action: S::Action, reward: f32, next_state: S) {
+        let new_transitions = self.data_augmenter.augment(state, action, reward, next_state);
 
         while self.transitions.len() + new_transitions.len() > self.capacity {
             self.transitions.pop_front();
@@ -47,20 +48,29 @@ impl<S: StateType, D: DataAugmenterType<State = S>> ReplayBuffer<S, D> {
 }
 
 #[derive(Clone, PartialEq, Debug)]
-pub struct StateTransition<S: StateType> {
-    pub state: S,
-    pub action: S::Action,
+pub struct StateTransition {
+    pub state: Vec<f32>,
+    pub action: usize,
     pub reward: f32,
-    pub next_state: S,
+    pub next_state: Vec<f32>,
+    pub invalid_actions_mask: Vec<bool>,
+    pub is_terminal: f32,
 }
 
-impl<S: StateType> StateTransition<S> {
-    pub fn new(state: S, action: S::Action, reward: f32, next_state: S) -> Self {
+impl StateTransition {
+    pub fn new<S: StateType>(state: S, action: S::Action, reward: f32, next_state: S) -> Self {
+        let mut invalid_actions = vec![true; S::NUM_ACTIONS];
+        for valid_action in next_state.possible_actions() {
+            invalid_actions[valid_action.index() as usize] = false;
+        }
+
         Self {
-            state,
-            action,
+            state: state.as_features(),
+            action: action.index(),
             reward,
-            next_state,
+            next_state: next_state.as_features(),
+            invalid_actions_mask: invalid_actions,
+            is_terminal: if next_state.is_terminal() { 1.0 } else { 0.0 },
         }
     }
 }

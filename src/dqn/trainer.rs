@@ -1,3 +1,11 @@
+use crate::dqn::data_augmenter::DataAugmenterType;
+use crate::dqn::stats::StatsRecorderType;
+use crate::dqn::{
+    critic::CriticType,
+    model::Model,
+    replay_buffer::ReplayBuffer,
+    state::{ActionType, StateType},
+};
 use burn::{
     module::AutodiffModule,
     nn::loss::{HuberLossConfig, Reduction::Auto},
@@ -8,14 +16,6 @@ use burn::{
 use rand::{distr::uniform::SampleRange, rng, rngs::ThreadRng, seq::IndexedRandom};
 use std::default::Default;
 use std::{cmp::Ordering, f32::NEG_INFINITY};
-use crate::dqn::data_augmenter::DataAugmenterType;
-use crate::dqn::stats::StatsRecorderType;
-use crate::dqn::{
-    critic::CriticType,
-    model::Model,
-    replay_buffer::{ReplayBuffer, StateTransition},
-    state::{ActionType, StateType},
-};
 
 pub(crate) struct Hyperparameters {
     pub learning_rate: f32,
@@ -113,7 +113,6 @@ where
             self.target_network = Some(model.clone());
         }
 
-
         // Epoch loop
 
         self.stats_recorder.record_new_epoch();
@@ -123,13 +122,15 @@ where
             let action = self.pick_action(&state, &model, epsilon);
             let next_state = state.advance(&action);
             let reward = self.critic.reward(&state, &action, &next_state);
-            let transition = StateTransition::new(state, action, reward, next_state.clone());
-            self.replay_buffer.store(transition);
+            self.replay_buffer
+                .store(state, action, reward, next_state.clone());
             state = next_state;
             self.stats_recorder.record_reward(reward);
             epoch_frames += 1;
 
-            if self.replay_buffer.size() >= self.config.batch_size && self.frame_num % self.config.training_frequency == 0 {
+            if self.replay_buffer.size() >= self.config.batch_size
+                && self.frame_num % self.config.training_frequency == 0
+            {
                 model = self.training_step(model);
             }
             if self.frame_num % self.config.network_sync_frequency == 0 {
@@ -147,14 +148,17 @@ where
 
     fn training_step(&mut self, model: M) -> M {
         let huber_loss = HuberLossConfig::new(1.0).init();
-        let Some(target_network) = self.target_network.as_ref() else { panic!("Target network should've been set by run_epoch()") };
+        let Some(target_network) = self.target_network.as_ref() else {
+            panic!("Target network should've been set by run_epoch()")
+        };
 
         let batch = self.replay_buffer.sample(self.config.batch_size);
         let output = model.forward(batch.states);
         let qvalues: Tensor<B, 1> = output
             .gather(1, batch.actions.unsqueeze_dim(1))
             .squeeze_dim(1);
-        let target_qvalues = target_network.valid()
+        let target_qvalues = target_network
+            .valid()
             .forward(batch.next_states)
             .mask_fill(batch.invalid_actions_mask, NEG_INFINITY)
             .max_dim(1)
