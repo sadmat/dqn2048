@@ -21,55 +21,30 @@ impl<B: AutodiffBackend> From<Vec<&StateTransition>> for TrainingBatch<B> {
         let state_size = records[0].state.len();
         let actions_size = records[0].invalid_actions_mask.len();
 
-        // let mut states: Vec<f32> = Vec::with_capacity(batch_size * state_size);
-        // let mut actions: Vec<i32> = Vec::with_capacity(batch_size);
-        // let mut invalid_actions_mask: Vec<bool> = Vec::with_capacity(batch_size * actions_size);
-        // let mut rewards: Vec<f32> = Vec::with_capacity(batch_size);
-        // let mut next_states: Vec<f32> = Vec::with_capacity(batch_size * state_size);
-        // let mut is_terminal: Vec<f32> = Vec::with_capacity(batch_size);
-        //
-        // for record in records {
-        //     states.extend_from_slice(record.state.as_slice());
-        //     actions.push(record.action as i32);
-        //     invalid_actions_mask.extend_from_slice(record.invalid_actions_mask.as_slice());
-        //     rewards.push(record.reward);
-        //     next_states.extend_from_slice(record.next_state.as_slice());
-        //     is_terminal.push(record.is_terminal);
-        // }
-        //
-        // let states = TensorData::new(states, [batch_size, state_size]);
-        // let actions = TensorData::new(actions, [batch_size]);
-        // let invalid_actions_mask =
-        //     TensorData::new(invalid_actions_mask, [batch_size, actions_size]);
-        // let rewards = TensorData::new(rewards, [batch_size]);
-        // let next_states = TensorData::new(next_states, [batch_size, state_size]);
-        // let is_terminal = TensorData::new(is_terminal, [batch_size]);
-        let device = B::Device::default();
+        let mut states: Vec<f32> = Vec::with_capacity(batch_size * state_size);
+        let mut actions: Vec<i32> = Vec::with_capacity(batch_size);
+        let mut invalid_actions_mask: Vec<bool> = Vec::with_capacity(batch_size * actions_size);
+        let mut rewards: Vec<f32> = Vec::with_capacity(batch_size);
+        let mut next_states: Vec<f32> = Vec::with_capacity(batch_size * state_size);
+        let mut is_terminal: Vec<f32> = Vec::with_capacity(batch_size);
 
-        let states = TensorData::new(
-            records.iter().flat_map(|&r| r.state.clone()).collect(),
-            [batch_size, state_size],
-        );
-        let actions = TensorData::new(
-            records.iter().map(|&r| r.action as i32).collect(),
-            [batch_size],
-        );
-        let invalid_actions_mask = TensorData::new(
-            records
-                .iter()
-                .flat_map(|&r| r.invalid_actions_mask.clone())
-                .collect(),
-            [batch_size, actions_size],
-        );
-        let rewards = TensorData::new(records.iter().map(|&r| r.reward).collect(), [batch_size]);
-        let next_states = TensorData::new(
-            records.iter().flat_map(|r| r.next_state.clone()).collect(),
-            [batch_size, state_size],
-        );
-        let is_terminal = TensorData::new(
-            records.iter().map(|r| r.is_terminal).collect(),
-            [batch_size],
-        );
+        for record in records {
+            states.extend_from_slice(record.state.as_slice());
+            actions.push(record.action as i32);
+            invalid_actions_mask.extend_from_slice(record.invalid_actions_mask.as_slice());
+            rewards.push(record.reward);
+            next_states.extend_from_slice(record.next_state.as_slice());
+            is_terminal.push(record.is_terminal);
+        }
+
+        let states = TensorData::new(states, [batch_size, state_size]);
+        let actions = TensorData::new(actions, [batch_size]);
+        let invalid_actions_mask =
+            TensorData::new(invalid_actions_mask, [batch_size, actions_size]);
+        let rewards = TensorData::new(rewards, [batch_size]);
+        let next_states = TensorData::new(next_states, [batch_size, state_size]);
+        let is_terminal = TensorData::new(is_terminal, [batch_size]);
+        let device = B::Device::default();
 
         TrainingBatch {
             states: Tensor::from_data(states, &device).detach(),
