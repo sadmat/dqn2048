@@ -4,10 +4,20 @@ import {
     Button,
     StyleMetrics,
     GridBox,
+    GroupBox,
+    Switch,
+    ComboBox,
+    LineEdit,
 } from "std-widgets.slint";
 import { Style, Colors } from "../styles.slint";
 import { PlotSize } from "../size.slint";
-import { UiTrainingState, Actions, Formatters } from "../globals.slint";
+import {
+    UiTrainingState,
+    UiPlotRangeType,
+    Actions,
+    Formatters,
+    Plots,
+} from "../globals.slint";
 
 component StatWidget inherits Rectangle {
     in property <string> name;
@@ -29,6 +39,96 @@ component StatWidget inherits Rectangle {
     }
 }
 
+component Toggle inherits Rectangle {
+    in property <string> label;
+    in-out property <bool> is-on;
+
+    HorizontalLayout {
+        alignment: space-between;
+        Text {
+            text: label;
+            color: gray;
+        }
+
+        Switch {
+            checked: is-on;
+            toggled => {
+                root.is-on = self.checked;
+            }
+        }
+    }
+}
+
+component PlotsRangeSettings inherits Rectangle {
+    in-out property <UiPlotRangeType> range-type <=> Plots.range-type;
+    in-out property <int> last-epochs <=> Plots.last-epochs;
+    in-out property <int> range-start <=> Plots.custom-range-start;
+    in-out property <int> range-end <=> Plots.custom-range-end;
+    property <string> last-epochs-string: last-epochs;
+    property <string> range-start-string: range-start;
+    property <string> range-end-string: range-end;
+
+    VerticalLayout {
+        spacing: 8px;
+        alignment: start;
+        Text {
+            text: "range:";
+            color: gray;
+            vertical-alignment: center;
+        }
+
+        ComboBox {
+            model: ["all", "last", "custom"];
+            selected(current-value) => {
+                range-type = range-type-from-string(current-value);
+                Plots.range-settings-changed();
+            }
+        }
+
+        if (range-type == UiPlotRangeType.last-epochs):
+            LineEdit {
+            placeholder-text: "number of epochs";
+            input-type: number;
+            text: last-epochs-string;
+            accepted(text) => {
+                last-epochs = text.to-float();
+                Plots.range-settings-changed();
+            }
+        }
+
+        if (range-type == UiPlotRangeType.custom):
+        VerticalLayout {
+            LineEdit {
+                placeholder-text: "epochs from";
+                text: range-start-string;
+                accepted(text) => {
+                    range-start = text.to-float();
+                    Plots.range-settings-changed();
+                }
+            }
+
+            LineEdit {
+                placeholder-text: "epochs to";
+                text: range-end-string;
+                accepted(text) => {
+                    range-end = text.to-float();
+                    Plots.range-settings-changed();
+                }
+            }
+        }
+    }
+
+    function range-type-from-string(type: string) -> UiPlotRangeType {
+        if (type == "custom") {
+            return UiPlotRangeType.custom;
+        } else if (type == "last") {
+            return UiPlotRangeType.last-epochs;
+        } else {
+            return UiPlotRangeType.all;
+        }
+    }
+}
+
 export component TrainingWidget inherits Rectangle {
     in property <UiTrainingState> state;
     in property <int> epoch;
@@ -43,10 +143,11 @@ export component TrainingWidget inherits Rectangle {
     in property <image> best-tile-plot;
     out property <PlotSize> plots-area-size: { width: plots-area.width / 1px, height: plots-area.height / 1px };
 
+    min-width: 1000px;
+    min-height: 600px;
     HorizontalBox {
+        padding-top: 0;
         plots-area := GridBox {
-            min-width: 1000px;
-            min-height: 600px;
             spacing: Style.plots-spacing;
 
             Rectangle {
@@ -113,40 +214,72 @@ export component TrainingWidget inherits Rectangle {
         }
 
         VerticalBox {
+            padding-top: 0;
+            padding-left: 0;
             width: 200px;
-            StatWidget {
-                name: "state";
-                value: training-state-string(state);
-            }
 
-            StatWidget {
-                name: "epoch";
-                value: Formatters.format-int(epoch);
-            }
+            VerticalLayout {
+                alignment: start;
+                spacing: 8px;
+                GroupBox {
+                    title: "stats";
+                    VerticalLayout {
+                        alignment: start;
+                        StatWidget {
+                            name: "state";
+                            value: training-state-string(state);
+                        }
 
-            StatWidget {
-                name: "epochs/s";
-                value: epochs-per-second;
-            }
+                        StatWidget {
+                            name: "epoch";
+                            value: Formatters.format-int(epoch);
+                        }
 
-            StatWidget {
-                name: "best score";
-                value: Formatters.format-int(best-score);
-            }
+                        StatWidget {
+                            name: "epochs/s";
+                            value: epochs-per-second;
+                        }
 
-            StatWidget {
-                name: "best tile";
-                value: best-tile;
-            }
+                        StatWidget {
+                            name: "best score";
+                            value: Formatters.format-int(best-score);
+                        }
 
-            StatWidget {
-                name: "recorded moves";
-                value: Formatters.format-int(recorded-transitions);
-            }
+                        StatWidget {
+                            name: "best tile";
+                            value: best-tile;
+                        }
 
-            StatWidget {
-                name: "epsilon";
-                value: epsilon.to-fixed(4);
+                        StatWidget {
+                            name: "recorded moves";
+                            value: Formatters.format-int(recorded-transitions);
+                        }
+
+                        StatWidget {
+                            name: "epsilon";
+                            value: epsilon.to-fixed(5);
+                        }
+                    }
+                }
+
+                GroupBox {
+                    title: "plots";
+                    VerticalLayout {
+                        alignment: start;
+                        spacing: 8px;
+
+                        //                        Toggle {
+//                            label: "log scale";
+//                            is-on: Plots.log-scale;
+//                            changed is-on => {
+//                                Plots.log-scale = self.is-on;
+//                                Plots.range-settings-changed();
+//                            }
+//                        }
+
+                        PlotsRangeSettings { }
+                    }
+                }
             }
 
             Rectangle { }

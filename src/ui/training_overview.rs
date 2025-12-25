@@ -62,10 +62,37 @@ impl PlotsSizes {
     }
 }
 
+impl PlotSize {
+    pub(crate) fn is_valid(&self) -> bool {
+        self.width > 0 && self.height > 0
+    }
+}
+
+pub(crate) enum PlotRangeType {
+    All,
+    LastEpochs(usize),
+    Custom(usize, usize),
+}
+
+pub(crate) struct PlotsSettings {
+    pub is_log_scale_enabled: bool,
+    pub range: PlotRangeType,
+}
+
+impl Default for PlotsSettings {
+    fn default() -> Self {
+        Self {
+            is_log_scale_enabled: false,
+            range: PlotRangeType::All,
+        }
+    }
+}
+
 pub(crate) enum TrainingOverviewUpdate {
     EpochFinished(TrainingStats),
     StateChanged(TrainingState),
     PlotsSizesChanged(PlotsSizes),
+    PlotsSettingsChanged(PlotsSettings),
 }
 
 pub(crate) struct TrainingOverviewThread {
@@ -77,6 +104,7 @@ pub(crate) struct TrainingOverviewThread {
     best_score: u32,
     best_tile: u32,
     plots_sizes: PlotsSizes,
+    plots_settings: PlotsSettings,
     epoch_per_second_counter: Arc<Mutex<u32>>,
 }
 
@@ -109,6 +137,7 @@ impl TrainingOverviewThread {
             best_score: 0,
             best_tile: 0,
             plots_sizes: Default::default(),
+            plots_settings: Default::default(),
             epoch_per_second_counter: Arc::new(Mutex::new(0)),
         }
     }
@@ -127,6 +156,9 @@ impl TrainingOverviewThread {
                     }
                     PlotsSizesChanged(sizes) => {
                         self.handle_plot_size_change(sizes);
+                    }
+                    PlotsSettingsChanged(settings) => {
+                        self.handle_plots_settings_change(settings);
                     }
                 }
             }
@@ -181,40 +213,52 @@ impl TrainingOverviewThread {
         let mut reward_plot = None;
         let mut best_tile_plot = None;
 
-        if self.plots_sizes.score_plot_size != plot_sizes.score_plot_size {
+        if self.plots_sizes.score_plot_size != plot_sizes.score_plot_size
+            && plot_sizes.score_plot_size.is_valid()
+        {
             self.plots_sizes.score_plot_size = plot_sizes.score_plot_size;
             score_plot = Some(render_score_plot(
                 "score per epoch",
                 &self.scores,
                 self.plots_sizes.score_plot_size.width as u32,
                 self.plots_sizes.score_plot_size.height as u32,
+                &self.plots_settings,
             ));
         }
-        if self.plots_sizes.epoch_legth_plot_size != plot_sizes.epoch_legth_plot_size {
+        if self.plots_sizes.epoch_legth_plot_size != plot_sizes.epoch_legth_plot_size
+            && plot_sizes.epoch_legth_plot_size.is_valid()
+        {
             self.plots_sizes.epoch_legth_plot_size = plot_sizes.epoch_legth_plot_size;
             epoch_length_plot = Some(render_score_plot(
                 "game length per epoch",
                 &self.epoch_length,
                 self.plots_sizes.epoch_legth_plot_size.width as u32,
                 self.plots_sizes.epoch_legth_plot_size.height as u32,
+                &self.plots_settings,
             ));
         }
-        if self.plots_sizes.reward_plot_size != plot_sizes.reward_plot_size {
+        if self.plots_sizes.reward_plot_size != plot_sizes.reward_plot_size
+            && plot_sizes.reward_plot_size.is_valid()
+        {
             self.plots_sizes.reward_plot_size = plot_sizes.reward_plot_size;
             reward_plot = Some(render_reward_plot(
                 "reward per epoch",
                 &self.rewards,
                 self.plots_sizes.reward_plot_size.width as u32,
                 self.plots_sizes.reward_plot_size.height as u32,
+                &self.plots_settings,
             ));
         }
-        if self.plots_sizes.best_tile_plot_size != plot_sizes.best_tile_plot_size {
+        if self.plots_sizes.best_tile_plot_size != plot_sizes.best_tile_plot_size
+            && plot_sizes.best_tile_plot_size.is_valid()
+        {
             self.plots_sizes.best_tile_plot_size = plot_sizes.best_tile_plot_size;
-            best_tile_plot = Some(render_score_plot(
+            best_tile_plot = Some(render_best_tile_plot(
                 "best tile per epoch",
                 &self.best_tiles,
                 self.plots_sizes.best_tile_plot_size.width as u32,
                 self.plots_sizes.best_tile_plot_size.height as u32,
+                &self.plots_settings,
             ));
         }
 
@@ -239,30 +283,39 @@ impl TrainingOverviewThread {
         .unwrap();
     }
 
+    fn handle_plots_settings_change(&mut self, settings: PlotsSettings) {
+        self.plots_settings = settings;
+        self.update_plots();
+    }
+
     fn update_plots(&self) {
         let score_plot = render_score_plot(
             "score per epoch",
             &self.scores,
             self.plots_sizes.score_plot_size.width as u32,
             self.plots_sizes.score_plot_size.height as u32,
+            &self.plots_settings,
         );
         let epoch_length_plot = render_score_plot(
             "game length per epoch",
             &self.epoch_length,
             self.plots_sizes.epoch_legth_plot_size.width as u32,
             self.plots_sizes.epoch_legth_plot_size.height as u32,
+            &self.plots_settings,
         );
         let reward_plot = render_reward_plot(
             "reward per epoch",
             &self.rewards,
             self.plots_sizes.reward_plot_size.width as u32,
             self.plots_sizes.reward_plot_size.height as u32,
+            &self.plots_settings,
         );
         let best_tile_plot = render_best_tile_plot(
             "best tile per epoch",
             &self.best_tiles,
             self.plots_sizes.best_tile_plot_size.width as u32,
             self.plots_sizes.best_tile_plot_size.height as u32,
+            &self.plots_settings,
         );
 
         let ui_handle = self.ui_handle.clone();
@@ -284,8 +337,34 @@ fn render_score_plot(
     values: &[u32],
     width: u32,
     height: u32,
+    settings: &PlotsSettings,
 ) -> SharedPixelBuffer<Rgb8Pixel> {
-    let x_axis_length = values.len().max(width as usize);
+    let start_x: usize;
+    let x_axis_length: usize;
+    let values = match settings.range {
+        PlotRangeType::All => {
+            start_x = 0;
+            x_axis_length = values.len().max(width as usize);
+            values
+        }
+        PlotRangeType::LastEpochs(epochs) => {
+            start_x = values.len().saturating_sub(epochs);
+            x_axis_length = epochs;
+            &values[values.len().saturating_sub(epochs)..]
+        }
+        PlotRangeType::Custom(start, end) => {
+            let start = start.min(values.len() - 1);
+            let end = end.min(values.len() - 1);
+            start_x = start;
+            x_axis_length = end - start + 1;
+            &values[start..=end]
+        }
+    };
+    let y_axis_length = if settings.is_log_scale_enabled {
+        values.iter().max().unwrap_or(&1).ilog2()
+    } else {
+        *values.iter().max().unwrap_or(&0)
+    };
 
     let mut pixel_buffer = SharedPixelBuffer::new(width, height);
     let backend = BitMapBackend::with_buffer(pixel_buffer.make_mut_bytes(), (width, height));
@@ -298,14 +377,26 @@ fn render_score_plot(
         .margin(8)
         .x_label_area_size(20)
         .y_label_area_size(30)
-        .build_cartesian_2d(0..x_axis_length, 0..(*values.iter().max().unwrap_or(&0)))
+        .build_cartesian_2d(start_x..start_x + x_axis_length, 0..y_axis_length)
         .expect("failed to build chart");
 
-    chart.configure_mesh().draw().unwrap();
-
-    let points = values.iter().enumerate().map(|(i, x)| (i, *x));
-
-    chart.draw_series(LineSeries::new(points, RED)).unwrap();
+    if settings.is_log_scale_enabled {
+        chart
+            .configure_mesh()
+            .y_label_formatter(&|y| format!("{}", 2_u32.pow(*y)))
+            .draw()
+            .unwrap();
+        let points = (start_x..start_x + x_axis_length)
+            .zip(values.iter())
+            .map(|(x, y)| (x, y.ilog2()));
+        chart.draw_series(LineSeries::new(points, RED)).unwrap();
+    } else {
+        chart.configure_mesh().draw().unwrap();
+        let points = (start_x..start_x + x_axis_length)
+            .zip(values.iter())
+            .map(|(x, y)| (x, *y));
+        chart.draw_series(LineSeries::new(points, RED)).unwrap();
+    }
 
     drop(chart);
     drop(root);
@@ -318,12 +409,41 @@ fn render_reward_plot(
     values: &[f32],
     width: u32,
     height: u32,
+    settings: &PlotsSettings,
 ) -> SharedPixelBuffer<Rgb8Pixel> {
-    let x_axis_length = values.len().max(width as usize);
-    let y_axis_length = *values
-        .iter()
-        .max_by(|lhs, rhs| lhs.total_cmp(rhs))
-        .unwrap_or(&0f32);
+    let start_x: usize;
+    let x_axis_length: usize;
+    let values = match settings.range {
+        PlotRangeType::All => {
+            start_x = 0;
+            x_axis_length = values.len().max(width as usize);
+            values
+        }
+        PlotRangeType::LastEpochs(epochs) => {
+            start_x = values.len().saturating_sub(epochs);
+            x_axis_length = epochs;
+            &values[values.len().saturating_sub(epochs)..]
+        }
+        PlotRangeType::Custom(start, end) => {
+            let start = start.min(values.len() - 1);
+            let end = end.min(values.len() - 1);
+            start_x = start;
+            x_axis_length = end - start + 1;
+            &values[start..=end]
+        }
+    };
+    let y_axis_length = if settings.is_log_scale_enabled {
+        values
+            .iter()
+            .max_by(|lhs, rhs| lhs.total_cmp(rhs))
+            .unwrap_or(&0f32)
+            .log2()
+    } else {
+        *values
+            .iter()
+            .max_by(|lhs, rhs| lhs.total_cmp(rhs))
+            .unwrap_or(&0f32)
+    };
 
     let mut pixel_buffer = SharedPixelBuffer::new(width, height);
     let backend = BitMapBackend::with_buffer(pixel_buffer.make_mut_bytes(), (width, height));
@@ -336,14 +456,26 @@ fn render_reward_plot(
         .margin(8)
         .x_label_area_size(20)
         .y_label_area_size(30)
-        .build_cartesian_2d(0..x_axis_length, 0f32..y_axis_length)
+        .build_cartesian_2d(start_x..start_x + x_axis_length, 0f32..y_axis_length)
         .expect("failed to build chart");
 
-    chart.configure_mesh().draw().unwrap();
-
-    let points = values.iter().enumerate().map(|(i, x)| (i, *x));
-
-    chart.draw_series(LineSeries::new(points, RED)).unwrap();
+    if settings.is_log_scale_enabled {
+        chart
+            .configure_mesh()
+            .y_label_formatter(&|y| format!("{}", 2_f32.powf(*y)))
+            .draw()
+            .unwrap();
+        let points = (start_x..start_x + x_axis_length)
+            .zip(values)
+            .map(|(x, y)| (x, y.log2()));
+        chart.draw_series(LineSeries::new(points, RED)).unwrap();
+    } else {
+        chart.configure_mesh().draw().unwrap();
+        let points = (start_x..start_x + x_axis_length)
+            .zip(values)
+            .map(|(x, y)| (x, *y));
+        chart.draw_series(LineSeries::new(points, RED)).unwrap();
+    }
 
     drop(chart);
     drop(root);
@@ -356,8 +488,29 @@ fn render_best_tile_plot(
     values: &[u32],
     width: u32,
     height: u32,
+    settings: &PlotsSettings,
 ) -> SharedPixelBuffer<Rgb8Pixel> {
-    let x_axis_length = values.len().max(width as usize);
+    let start_x: usize;
+    let x_axis_length: usize;
+    let values = match settings.range {
+        PlotRangeType::All => {
+            start_x = 0;
+            x_axis_length = values.len().max(width as usize);
+            values
+        }
+        PlotRangeType::LastEpochs(epochs) => {
+            start_x = values.len().saturating_sub(epochs);
+            x_axis_length = epochs;
+            &values[values.len().saturating_sub(epochs)..]
+        }
+        PlotRangeType::Custom(start, end) => {
+            let start = start.min(values.len() - 1);
+            let end = end.min(values.len() - 1);
+            start_x = start;
+            x_axis_length = end - start + 1;
+            &values[start..=end]
+        }
+    };
 
     let mut pixel_buffer = SharedPixelBuffer::new(width, height);
     let backend = BitMapBackend::with_buffer(pixel_buffer.make_mut_bytes(), (width, height));
@@ -371,8 +524,8 @@ fn render_best_tile_plot(
         .x_label_area_size(20)
         .y_label_area_size(30)
         .build_cartesian_2d(
-            0..x_axis_length,
-            0..(values.iter().max().unwrap_or(&0).ilog2() + 1),
+            start_x..start_x + x_axis_length,
+            0..(values.iter().max().unwrap_or(&1).ilog2() + 1),
         )
         .expect("failed to build chart");
 
@@ -382,7 +535,9 @@ fn render_best_tile_plot(
         .draw()
         .unwrap();
 
-    let points = values.iter().enumerate().map(|(i, x)| (i, x.ilog2()));
+    let points = (start_x..start_x + x_axis_length)
+        .zip(values)
+        .map(|(x, y)| (x, y.ilog2()));
 
     chart.draw_series(LineSeries::new(points, RED)).unwrap();
 

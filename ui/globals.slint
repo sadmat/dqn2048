@@ -1,13 +1,21 @@
 import { PlotSize } from "size.slint";
 
 export enum UiTrainingState { idle, training }
+export enum UiPlotRangeType { all, last-epochs, custom }
 
 export global Plots {
     in-out property <PlotSize> plots-area-size;
+    callback plots-area-size-changed;
     in property <image> score-plot;
     in property <image> epoch-length-plot;
     in property <image> reward-plot;
     in property <image> best-tile-plot;
+    in-out property <bool> log-scale;
+    in-out property <UiPlotRangeType> range-type;
+    in-out property <int> last-epochs;
+    in-out property <int> custom-range-start;
+    in-out property <int> custom-range-end;
+    callback range-settings-changed;
 }
 
 export global UiTrainingStats {
@@ -24,7 +32,6 @@ export global Actions {
     callback quit;
     callback load-model;
     callback save-model;
-    callback plots-area-size-changed;
     callback start-training;
     callback pause-training;
 }

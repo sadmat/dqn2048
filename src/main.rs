@@ -7,9 +7,11 @@ mod training;
 mod ui;
 
 use crate::training::training_thread::TrainingThread;
-use crate::training::types::{TrainingAction, TrainingMessage};
+use crate::training::types::TrainingAction;
 use crate::ui::training_overview::TrainingOverviewUpdate::PlotsSizesChanged;
-use crate::ui::training_overview::{PlotsSizes, TrainingOverviewThread};
+use crate::ui::training_overview::{
+    PlotRangeType, PlotsSettings, PlotsSizes, TrainingOverviewThread, TrainingOverviewUpdate,
+};
 use crate::ui::training_update_adapter::TrainingUpdateAdapter;
 use burn::backend::Autodiff;
 #[cfg(feature = "cuda")]
@@ -21,10 +23,10 @@ use burn::backend::Wgpu;
 use num_format::{SystemLocale, ToFormattedString};
 use plotters::prelude::*;
 use rfd::FileDialog;
-use slint::{Image, Rgb8Pixel, SharedPixelBuffer, Timer, TimerMode, Weak, quit_event_loop};
+use slint::{quit_event_loop, Timer, TimerMode, Weak};
 use std::error::Error;
+use std::sync::mpsc::Sender;
 use std::sync::{Arc, Mutex};
-use std::thread;
 use std::time::Duration;
 
 slint::include_modules!();
@@ -44,7 +46,24 @@ fn main() -> Result<(), Box<dyn Error>> {
         TrainingOverviewThread::spawn_thread(ui_handle.clone());
     let _ = TrainingUpdateAdapter::spawn_thread(messages_rx, updates_tx.clone());
 
+    setup_actions(actions_tx, &ui, updates_tx.clone());
+    setup_plots(&ui, updates_tx);
+    start_plots_area_update_timer(ui_handle.clone());
+    let _timer = start_epochs_per_second_timer(epochs_per_second, ui_handle.clone());
+    setup_formatters(ui_handle.clone());
+
+    ui.run()?;
+
+    Ok(())
+}
+
+fn setup_actions(
+    actions_tx: Sender<TrainingAction>,
+    ui: &AppWindow,
+    updates_tx: Sender<TrainingOverviewUpdate>,
+) {
     let actions = ui.global::<Actions>();
+    let ui_handle = ui.as_weak();
 
     actions.on_start_training({
         let action_tx = actions_tx.clone();
@@ -76,8 +95,17 @@ fn main() -> Result<(), Box<dyn Error>> {
             action_tx.send(TrainingAction::Load(file)).unwrap();
         }
     });
-    actions.on_plots_area_size_changed({
+    actions.on_quit(|| {
+        quit_event_loop().unwrap();
+    });
+}
+
+fn setup_plots(ui: &AppWindow, updates_tx: Sender<TrainingOverviewUpdate>) {
+    let plots = ui.global::<Plots>();
+    let ui_handle = ui.as_weak();
+    plots.on_plots_area_size_changed({
         let ui_handle = ui_handle.clone();
+        let updates_tx = updates_tx.clone();
         move || {
             let ui = ui_handle.unwrap();
             let plots = ui.global::<Plots>();
@@ -87,17 +115,44 @@ fn main() -> Result<(), Box<dyn Error>> {
             updates_tx.send(PlotsSizesChanged(sizes)).unwrap();
         }
     });
-    actions.on_quit(|| {
-        quit_event_loop().unwrap();
+    plots.on_range_settings_changed({
+        move || {
+            let ui = ui_handle.unwrap();
+            let plots = ui.global::<Plots>();
+            if let Some(settings) = build_plot_settings(&plots) {
+                updates_tx
+                    .send(TrainingOverviewUpdate::PlotsSettingsChanged(settings))
+                    .unwrap();
+            }
+        }
     });
+}
 
-    start_plots_area_update_timer(ui_handle.clone());
-    let _timer = start_epochs_per_second_timer(epochs_per_second, ui_handle.clone());
-    setup_formatters(ui_handle.clone());
+fn build_plot_settings(plots: &Plots) -> Option<PlotsSettings> {
+    let range_settings = match plots.get_range_type() {
+        UiPlotRangeType::All => Some(PlotRangeType::All),
+        UiPlotRangeType::LastEpochs => {
+            Some(PlotRangeType::LastEpochs(plots.get_last_epochs() as usize))
+        }
+        UiPlotRangeType::Custom => {
+            let range_start = plots.get_custom_range_start() as usize;
+            let range_end = plots.get_custom_range_end() as usize;
+            if range_start < range_end {
+                Some(PlotRangeType::Custom(range_start, range_end))
+            } else {
+                None
+            }
+        }
+    };
 
-    ui.run()?;
-
-    Ok(())
+    if let Some(range) = range_settings {
+        return Some(PlotsSettings {
+            is_log_scale_enabled: plots.get_log_scale(),
+            range,
+        });
+    } else {
+        None
+    }
 }
 
 fn start_plots_area_update_timer(ui_handle: Weak<AppWindow>) {
@@ -130,4 +185,3 @@ fn setup_formatters(ui_handle: Weak<AppWindow>) {
         value.to_formatted_string(&locale).into()
     });
 }
-

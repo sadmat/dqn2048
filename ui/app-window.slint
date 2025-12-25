@@ -3,6 +3,7 @@ import { TrainingWidget } from "training/training-widget.slint";
 import {
     Plots,
     UiTrainingStats,
+    UiPlotRangeType,
     Actions,
     UiTrainingState,
     Formatters,
@@ -10,7 +11,7 @@ import {
 import { PlotSize } from "size.slint";
 
 export { PlotSize }
-export { Plots, UiTrainingStats, Actions, UiTrainingState, Formatters }
+export { Plots, UiTrainingStats, UiPlotRangeType, Actions, UiTrainingState, Formatters }
 
 export component AppWindow inherits Window {
 
@@ -42,30 +43,29 @@ export component AppWindow inherits Window {
         }
     }
 
-    VerticalLayout {
-        training-widget := TrainingWidget {
-            state: UiTrainingStats.state;
-            epoch: UiTrainingStats.epoch;
-            epochs-per-second: UiTrainingStats.epochs-per-second;
-            best-score: UiTrainingStats.best-score;
-            best-tile: UiTrainingStats.best-tile;
-            recorded-transitions: UiTrainingStats.recorded-states;
-            epsilon: UiTrainingStats.epsilon;
-            score-plot: Plots.score-plot;
-            epoch-length-plot: Plots.epoch-length-plot;
-            reward-plot: Plots.reward-plot;
-            best-tile-plot: Plots.best-tile-plot;
-            changed plots-area-size => {
-                if (Plots.plots-area-size != self.plots-area-size) {
-                    Plots.plots-area-size = self.plots-area-size;
-                    Actions.plots-area-size-changed()
-                }
+    // TODO: use these bindings directly
+    training-widget := TrainingWidget {
+        state: UiTrainingStats.state;
+        epoch: UiTrainingStats.epoch;
+        epochs-per-second: UiTrainingStats.epochs-per-second;
+        best-score: UiTrainingStats.best-score;
+        best-tile: UiTrainingStats.best-tile;
+        recorded-transitions: UiTrainingStats.recorded-states;
+        epsilon: UiTrainingStats.epsilon;
+        score-plot: Plots.score-plot;
+        epoch-length-plot: Plots.epoch-length-plot;
+        reward-plot: Plots.reward-plot;
+        best-tile-plot: Plots.best-tile-plot;
+        changed plots-area-size => {
+            if (Plots.plots-area-size != self.plots-area-size) {
+                Plots.plots-area-size = self.plots-area-size;
+                Plots.plots-area-size-changed()
             }
         }
     }
 
     public function force-plots-area-size-update() {
         Plots.plots-area-size = training-widget.plots-area-size;
-        Actions.plots-area-size-changed();
+        Plots.plots-area-size-changed();
     }
 }
