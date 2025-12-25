@@ -340,24 +340,28 @@ fn render_score_plot(
     settings: &PlotsSettings,
 ) -> SharedPixelBuffer<Rgb8Pixel> {
     let start_x: usize;
-    let x_axis_length: usize;
+    let end_x: usize;
     let values = match settings.range {
         PlotRangeType::All => {
-            start_x = 0;
-            x_axis_length = values.len().max(width as usize);
+            start_x = 1;
+            end_x = values.len().max(width as usize);
             values
         }
         PlotRangeType::LastEpochs(epochs) => {
-            start_x = values.len().saturating_sub(epochs);
-            x_axis_length = epochs;
+            start_x = values.len().saturating_sub(epochs) + 1;
+            end_x = start_x + epochs - 1;
             &values[values.len().saturating_sub(epochs)..]
         }
         PlotRangeType::Custom(start, end) => {
-            let start = start.min(values.len() - 1);
-            let end = end.min(values.len() - 1);
+            let start = start.min(values.len().saturating_sub(1));
+            let end = end.min(values.len().saturating_sub(1));
             start_x = start;
-            x_axis_length = end - start + 1;
-            &values[start..=end]
+            end_x = end;
+            if values.is_empty() {
+                values
+            } else {
+                &values[start..=end]
+            }
         }
     };
     let y_axis_length = if settings.is_log_scale_enabled {
@@ -377,7 +381,7 @@ fn render_score_plot(
         .margin(8)
         .x_label_area_size(20)
         .y_label_area_size(30)
-        .build_cartesian_2d(start_x..start_x + x_axis_length, 0..y_axis_length)
+        .build_cartesian_2d(start_x..end_x, 0..y_axis_length)
         .expect("failed to build chart");
 
     if settings.is_log_scale_enabled {
@@ -386,15 +390,13 @@ fn render_score_plot(
             .y_label_formatter(&|y| format!("{}", 2_u32.pow(*y)))
             .draw()
             .unwrap();
-        let points = (start_x..start_x + x_axis_length)
+        let points = (start_x..=end_x)
             .zip(values.iter())
             .map(|(x, y)| (x, y.ilog2()));
         chart.draw_series(LineSeries::new(points, RED)).unwrap();
     } else {
         chart.configure_mesh().draw().unwrap();
-        let points = (start_x..start_x + x_axis_length)
-            .zip(values.iter())
-            .map(|(x, y)| (x, *y));
+        let points = (start_x..=end_x).zip(values.iter()).map(|(x, y)| (x, *y));
         chart.draw_series(LineSeries::new(points, RED)).unwrap();
     }
 
@@ -412,24 +414,28 @@ fn render_reward_plot(
     settings: &PlotsSettings,
 ) -> SharedPixelBuffer<Rgb8Pixel> {
     let start_x: usize;
-    let x_axis_length: usize;
+    let end_x: usize;
     let values = match settings.range {
         PlotRangeType::All => {
-            start_x = 0;
-            x_axis_length = values.len().max(width as usize);
+            start_x = 1;
+            end_x = values.len().max(width as usize);
             values
         }
         PlotRangeType::LastEpochs(epochs) => {
-            start_x = values.len().saturating_sub(epochs);
-            x_axis_length = epochs;
+            start_x = values.len().saturating_sub(epochs) + 1;
+            end_x = start_x + epochs - 1;
             &values[values.len().saturating_sub(epochs)..]
         }
         PlotRangeType::Custom(start, end) => {
-            let start = start.min(values.len() - 1);
-            let end = end.min(values.len() - 1);
+            let start = start.min(values.len().saturating_sub(1));
+            let end = end.min(values.len().saturating_sub(1));
             start_x = start;
-            x_axis_length = end - start + 1;
-            &values[start..=end]
+            end_x = end;
+            if values.is_empty() {
+                values
+            } else {
+                &values[start..=end]
+            }
         }
     };
     let y_axis_length = if settings.is_log_scale_enabled {
@@ -456,7 +462,7 @@ fn render_reward_plot(
         .margin(8)
         .x_label_area_size(20)
         .y_label_area_size(30)
-        .build_cartesian_2d(start_x..start_x + x_axis_length, 0f32..y_axis_length)
+        .build_cartesian_2d(start_x..end_x, 0f32..y_axis_length)
         .expect("failed to build chart");
 
     if settings.is_log_scale_enabled {
@@ -465,15 +471,11 @@ fn render_reward_plot(
             .y_label_formatter(&|y| format!("{}", 2_f32.powf(*y)))
             .draw()
             .unwrap();
-        let points = (start_x..start_x + x_axis_length)
-            .zip(values)
-            .map(|(x, y)| (x, y.log2()));
+        let points = (start_x..=end_x).zip(values).map(|(x, y)| (x, y.log2()));
         chart.draw_series(LineSeries::new(points, RED)).unwrap();
     } else {
         chart.configure_mesh().draw().unwrap();
-        let points = (start_x..start_x + x_axis_length)
-            .zip(values)
-            .map(|(x, y)| (x, *y));
+        let points = (start_x..=end_x).zip(values).map(|(x, y)| (x, *y));
         chart.draw_series(LineSeries::new(points, RED)).unwrap();
     }
 
@@ -491,24 +493,28 @@ fn render_best_tile_plot(
     settings: &PlotsSettings,
 ) -> SharedPixelBuffer<Rgb8Pixel> {
     let start_x: usize;
-    let x_axis_length: usize;
+    let end_x: usize;
     let values = match settings.range {
         PlotRangeType::All => {
-            start_x = 0;
-            x_axis_length = values.len().max(width as usize);
+            start_x = 1;
+            end_x = values.len().max(width as usize);
             values
         }
         PlotRangeType::LastEpochs(epochs) => {
-            start_x = values.len().saturating_sub(epochs);
-            x_axis_length = epochs;
+            start_x = values.len().saturating_sub(epochs) + 1;
+            end_x = start_x + epochs - 1;
             &values[values.len().saturating_sub(epochs)..]
         }
         PlotRangeType::Custom(start, end) => {
-            let start = start.min(values.len() - 1);
-            let end = end.min(values.len() - 1);
+            let start = start.min(values.len().saturating_sub(1));
+            let end = end.min(values.len().saturating_sub(1));
             start_x = start;
-            x_axis_length = end - start + 1;
-            &values[start..=end]
+            end_x = end;
+            if values.is_empty() {
+                values
+            } else {
+                &values[start..=end]
+            }
         }
     };
 
@@ -524,7 +530,7 @@ fn render_best_tile_plot(
         .x_label_area_size(20)
         .y_label_area_size(30)
         .build_cartesian_2d(
-            start_x..start_x + x_axis_length,
+            start_x..end_x,
             0..(values.iter().max().unwrap_or(&1).ilog2() + 1),
         )
         .expect("failed to build chart");
@@ -535,9 +541,7 @@ fn render_best_tile_plot(
         .draw()
         .unwrap();
 
-    let points = (start_x..start_x + x_axis_length)
-        .zip(values)
-        .map(|(x, y)| (x, y.ilog2()));
+    let points = (start_x..=end_x).zip(values).map(|(x, y)| (x, y.ilog2()));
 
     chart.draw_series(LineSeries::new(points, RED)).unwrap();
 

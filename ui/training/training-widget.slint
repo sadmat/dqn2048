@@ -90,9 +90,12 @@ component PlotsRangeSettings inherits Rectangle {
             placeholder-text: "number of epochs";
             input-type: number;
             text: last-epochs-string;
-            accepted(text) => {
+            edited(text) => {
                 last-epochs = text.to-float();
                 Plots.range-settings-changed();
+            }
+            accepted(text) => {
+                self.clear-focus();
             }
         }
 
@@ -101,18 +104,24 @@ component PlotsRangeSettings inherits Rectangle {
             LineEdit {
                 placeholder-text: "epochs from";
                 text: range-start-string;
-                accepted(text) => {
+                edited(text) => {
                     range-start = text.to-float();
                     Plots.range-settings-changed();
+                }
+                accepted(text) => {
+                    self.clear-focus();
                 }
             }
 
             LineEdit {
                 placeholder-text: "epochs to";
                 text: range-end-string;
-                accepted(text) => {
+                edited(text) => {
                     range-end = text.to-float();
                     Plots.range-settings-changed();
+                }
+                accepted(text) => {
+                    self.clear-focus();
                 }
             }
         }
