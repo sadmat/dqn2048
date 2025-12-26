@@ -1,10 +1,10 @@
 use burn::{
-    Tensor,
     config::{self, Config},
     module::Module,
     nn::{Linear, LinearConfig, Relu},
     prelude::Backend,
     tensor::Float,
+    Tensor,
 };
 
 use crate::dqn::model::Model;
@@ -29,7 +29,8 @@ impl GameModelConfig {
             relu1: Relu::new(),
             hidden2: LinearConfig::new(self.hidden1_size, self.hidden2_size).init(device),
             relu2: Relu::new(),
-            output: LinearConfig::new(self.hidden2_size, self.num_outputs).init(device),
+            value_output: LinearConfig::new(self.hidden2_size, 1).init(device),
+            advantage_output: LinearConfig::new(self.hidden2_size, self.num_outputs).init(device),
         }
     }
 }
@@ -40,7 +41,8 @@ pub(crate) struct GameModel<B: Backend> {
     relu1: Relu,
     hidden2: Linear<B>,
     relu2: Relu,
-    output: Linear<B>,
+    value_output: Linear<B>,
+    advantage_output: Linear<B>,
 }
 
 impl<B: Backend> Model<B> for GameModel<B> {
@@ -49,8 +51,12 @@ impl<B: Backend> Model<B> for GameModel<B> {
         let x = self.relu1.forward(x);
         let x = self.hidden2.forward(x);
         let x = self.relu2.forward(x);
-        let x = self.output.forward(x);
 
-        x
+        let state_values = self.value_output.forward(x.clone());
+        let advantage_values = self.advantage_output.forward(x);
+
+        let mean_advantage = advantage_values.clone().mean_dim(1);
+
+        state_values + advantage_values - mean_advantage
     }
 }
