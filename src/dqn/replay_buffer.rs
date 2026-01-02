@@ -4,6 +4,7 @@ use rand::Rng;
 
 use crate::dqn::data_augmenter::DataAugmenterType;
 use crate::dqn::state::ActionType;
+use crate::dqn::sum_tree::SumTree;
 use crate::dqn::{state::StateType, training_batch::TrainingBatch};
 
 pub struct ReplayBuffer<S: StateType, D: DataAugmenterType<State = S>> {
@@ -11,6 +12,8 @@ pub struct ReplayBuffer<S: StateType, D: DataAugmenterType<State = S>> {
     transitions: Vec<StateTransition>,
     capacity: usize,
     write_position: usize,
+    priorities: SumTree,
+    max_priority: f32,
 }
 
 impl<S: StateType, D: DataAugmenterType<State = S>> ReplayBuffer<S, D> {
@@ -20,6 +23,8 @@ impl<S: StateType, D: DataAugmenterType<State = S>> ReplayBuffer<S, D> {
             transitions: Vec::with_capacity(capacity),
             capacity,
             write_position: 0,
+            priorities: SumTree::with_capacity(capacity),
+            max_priority: 1.0,
         }
     }
 
@@ -34,6 +39,8 @@ impl<S: StateType, D: DataAugmenterType<State = S>> ReplayBuffer<S, D> {
             } else {
                 self.transitions[self.write_position] = transition;
             }
+            self.priorities
+                .update(self.write_position, self.max_priority);
             self.write_position = (self.write_position + 1) % self.capacity;
         }
     }
@@ -42,14 +49,54 @@ impl<S: StateType, D: DataAugmenterType<State = S>> ReplayBuffer<S, D> {
         self.transitions.len()
     }
 
-    pub fn sample<B: AutodiffBackend>(&self, batch_size: usize) -> TrainingBatch<B> {
+    pub fn sample<B: AutodiffBackend>(&self, batch_size: usize, beta: f32) -> TrainingBatch<B> {
         let mut rng = rand::rng();
-        let mut batch = Vec::with_capacity(batch_size);
-        for _ in 0..batch_size {
-            let index = rng.random_range(0..self.transitions.len());
-            batch.push(&self.transitions[index]);
+        let mut indices = Vec::with_capacity(batch_size);
+        let mut weights = Vec::with_capacity(batch_size);
+
+        // Sample indices per segment & prepare weights
+        let total_priority = self.priorities.total();
+        let segment_len = total_priority / batch_size as f32;
+        for i in 0..batch_size {
+            let segment_start = segment_len * i as f32;
+            let segment_end = segment_start + segment_len;
+            let value = rng
+                .random_range(segment_start..segment_end)
+                .min(total_priority - 0.0001);
+            let (index, priority) = self.priorities.sample(value);
+            let sample_prob = priority / total_priority;
+            let weight = (sample_prob * self.transitions.len() as f32).powf(-beta);
+            weights.push(weight);
+            indices.push(index);
         }
-        batch.into()
+
+        // Normalize weights
+        let max_weight = weights.iter().map(|&weight| weight).fold(0.0, f32::max);
+        for weight in &mut weights {
+            *weight /= max_weight;
+        }
+
+        // Extract examples
+        let examples = indices
+            .iter()
+            .map(|&index| &self.transitions[index])
+            .collect::<Vec<_>>();
+
+        TrainingBatch::from(examples, weights, indices)
+    }
+
+    pub fn update_priorities(
+        &mut self,
+        indices: &[usize],
+        priorities: &[f32],
+        alpha: f32,
+        epsilon: f32,
+    ) {
+        for (index, priority) in indices.iter().zip(priorities) {
+            let priority = (*priority + epsilon).powf(alpha);
+            self.priorities.update(*index, priority);
+            self.max_priority = f32::max(self.max_priority, priority);
+        }
     }
 }
 

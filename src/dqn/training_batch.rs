@@ -13,10 +13,16 @@ pub struct TrainingBatch<B: AutodiffBackend> {
     pub rewards: Tensor<B::InnerBackend, 1, Float>,
     pub next_states: Tensor<B::InnerBackend, 2, Float>,
     pub is_terminal: Tensor<B::InnerBackend, 1, Float>,
+    pub weights: Tensor<B, 1, Float>,
+    pub indices: Vec<usize>,
 }
 
-impl<B: AutodiffBackend> From<Vec<&StateTransition>> for TrainingBatch<B> {
-    fn from(records: Vec<&StateTransition>) -> Self {
+impl<B: AutodiffBackend> TrainingBatch<B> {
+    pub(crate) fn from(
+        records: Vec<&StateTransition>,
+        weights: Vec<f32>,
+        indices: Vec<usize>,
+    ) -> Self {
         let batch_size = records.len();
         let state_size = records[0].state.len();
         let actions_size = records[0].invalid_actions_mask.len();
@@ -44,6 +50,7 @@ impl<B: AutodiffBackend> From<Vec<&StateTransition>> for TrainingBatch<B> {
         let rewards = TensorData::new(rewards, [batch_size]);
         let next_states = TensorData::new(next_states, [batch_size, state_size]);
         let is_terminal = TensorData::new(is_terminal, [batch_size]);
+        let weights = TensorData::new(weights, [batch_size]);
         let device = B::Device::default();
 
         TrainingBatch {
@@ -53,6 +60,8 @@ impl<B: AutodiffBackend> From<Vec<&StateTransition>> for TrainingBatch<B> {
             rewards: Tensor::from_data(rewards, &device),
             next_states: Tensor::from_data(next_states, &device),
             is_terminal: Tensor::from_data(is_terminal, &device),
+            weights: Tensor::from_data(weights, &device).detach(),
+            indices,
         }
     }
 }

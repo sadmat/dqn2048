@@ -22,6 +22,10 @@ pub(crate) struct Hyperparameters {
     pub discount_factor: f32,
     pub batch_size: usize,
     pub replay_buffer_capacity: usize,
+    pub per_alpha: f32,
+    pub per_beta: f32,
+    pub per_beta_increment: f32,
+    pub per_epsilon: f32,
     pub initial_epsilon: f64,
     pub epsilon_decay_frames: i32,
     pub min_epsilon: f64,
@@ -35,7 +39,11 @@ impl Hyperparameters {
             learning_rate: 0.00025,
             discount_factor: 0.99,
             batch_size: 8 * 1024,
-            replay_buffer_capacity: 15_000_000,
+            replay_buffer_capacity: 2_u32.pow(20) as usize,
+            per_alpha: 0.6,
+            per_beta: 0.4,
+            per_beta_increment: 0.001,
+            per_epsilon: 0.001,
             initial_epsilon: 0.5,
             epsilon_decay_frames: 7500,
             min_epsilon: 0.0001,
@@ -151,8 +159,11 @@ where
         let Some(target_network) = self.target_network.as_ref() else {
             panic!("Target network should've been set by run_epoch()")
         };
+        let per_beta = (self.config.per_beta
+            + self.config.per_beta_increment * self.epoch_num as f32)
+            .min(1.0);
 
-        let batch = self.replay_buffer.sample(self.config.batch_size);
+        let batch = self.replay_buffer.sample(self.config.batch_size, per_beta);
         let output = model.forward(batch.states);
         let qvalues: Tensor<B, 1> = output
             .gather(1, batch.actions.unsqueeze_dim(1))
@@ -167,7 +178,17 @@ where
             + (1.0 - batch.is_terminal) * self.config.discount_factor * target_qvalues;
         let target_qvalues = Tensor::from_inner(target_qvalues).detach();
 
+        let td_errors = (qvalues.clone() - target_qvalues.clone()).abs();
+        let td_errors = td_errors.into_data().into_vec().unwrap();
+        self.replay_buffer.update_priorities(
+            batch.indices.as_slice(),
+            td_errors.as_slice(),
+            self.config.per_alpha,
+            self.config.per_epsilon,
+        );
+
         let loss = huber_loss.forward(qvalues, target_qvalues, Auto);
+        let loss = loss * batch.weights;
         let grads = loss.backward();
         let grads = GradientsParams::from_grads(grads, &model);
 

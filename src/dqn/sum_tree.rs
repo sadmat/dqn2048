@@ -1,10 +1,11 @@
-struct SumTree {
+pub(crate) struct SumTree {
     capacity: usize,
     storage: Vec<f32>,
+    last_index: usize,
 }
 
 impl SumTree {
-    fn with_capacity(capacity: usize) -> Self {
+    pub(crate) fn with_capacity(capacity: usize) -> Self {
         assert!(
             capacity.is_power_of_two(),
             "Sum tree capacity has to be a power of 2"
@@ -12,15 +13,17 @@ impl SumTree {
         Self {
             capacity,
             storage: vec![0.0; 2 * capacity],
+            last_index: 0,
         }
     }
 
-    fn total(&self) -> f32 {
+    pub(crate) fn total(&self) -> f32 {
         self.storage[1]
     }
 
-    fn update(&mut self, mut index: usize, value: f32) {
+    pub(crate) fn update(&mut self, mut index: usize, value: f32) {
         assert!(index < self.capacity, "Given index is out of bounds");
+        self.last_index = self.last_index.max(index);
         index += self.capacity;
         self.storage[index] = value;
 
@@ -30,7 +33,12 @@ impl SumTree {
         }
     }
 
-    fn sample_index(&self, mut value: f32) -> usize {
+    pub(crate) fn sample(&self, value: f32) -> (usize, f32) {
+        let index = self.sample_index(value);
+        (index, self.storage[index + self.capacity])
+    }
+
+    pub(crate) fn sample_index(&self, mut value: f32) -> usize {
         let mut index = 1;
 
         while index < self.capacity {
@@ -42,7 +50,7 @@ impl SumTree {
             }
         }
 
-        index - self.capacity
+        (index - self.capacity).min(self.last_index)
     }
 
     fn left(&self, index: usize) -> f32 {
