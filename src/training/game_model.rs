@@ -14,10 +14,12 @@ pub(crate) struct GameModelConfig {
     // #[config(default = "16")]
     #[config(default = "16 * 12")]
     num_inputs: usize,
-    #[config(default = "512")]
+    #[config(default = "768")]
     hidden1_size: usize,
-    #[config(default = "256")]
+    #[config(default = "512")]
     hidden2_size: usize,
+    #[config(default = "256")]
+    hidden3_size: usize,
     #[config(default = "4")]
     num_outputs: usize,
 }
@@ -29,8 +31,10 @@ impl GameModelConfig {
             relu1: Relu::new(),
             hidden2: LinearConfig::new(self.hidden1_size, self.hidden2_size).init(device),
             relu2: Relu::new(),
-            value_output: LinearConfig::new(self.hidden2_size, 1).init(device),
-            advantage_output: LinearConfig::new(self.hidden2_size, self.num_outputs).init(device),
+            hidden3: LinearConfig::new(self.hidden2_size, self.hidden3_size).init(device),
+            relu3: Relu::new(),
+            value_output: LinearConfig::new(self.hidden3_size, 1).init(device),
+            advantage_output: LinearConfig::new(self.hidden3_size, self.num_outputs).init(device),
         }
     }
 }
@@ -41,6 +45,8 @@ pub(crate) struct GameModel<B: Backend> {
     relu1: Relu,
     hidden2: Linear<B>,
     relu2: Relu,
+    hidden3: Linear<B>,
+    relu3: Relu,
     value_output: Linear<B>,
     advantage_output: Linear<B>,
 }
@@ -51,6 +57,8 @@ impl<B: Backend> Model<B> for GameModel<B> {
         let x = self.relu1.forward(x);
         let x = self.hidden2.forward(x);
         let x = self.relu2.forward(x);
+        let x = self.hidden3.forward(x);
+        let x = self.relu3.forward(x);
 
         let state_values = self.value_output.forward(x.clone());
         let advantage_values = self.advantage_output.forward(x);
