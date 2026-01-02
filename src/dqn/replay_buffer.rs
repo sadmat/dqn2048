@@ -1,35 +1,41 @@
-use std::collections::VecDeque;
 use burn::tensor::backend::AutodiffBackend;
-use rand::Rng;
 use rand::seq::IndexedRandom;
+use rand::Rng;
 
-use crate::dqn::{state::StateType, training_batch::TrainingBatch};
 use crate::dqn::data_augmenter::DataAugmenterType;
 use crate::dqn::state::ActionType;
+use crate::dqn::{state::StateType, training_batch::TrainingBatch};
 
 pub struct ReplayBuffer<S: StateType, D: DataAugmenterType<State = S>> {
     data_augmenter: D,
-    transitions: VecDeque<StateTransition>,
+    transitions: Vec<StateTransition>,
     capacity: usize,
+    write_position: usize,
 }
 
 impl<S: StateType, D: DataAugmenterType<State = S>> ReplayBuffer<S, D> {
     pub fn new(data_augmenter: D, capacity: usize) -> Self {
         ReplayBuffer {
             data_augmenter,
-            transitions: VecDeque::new(),
+            transitions: Vec::with_capacity(capacity),
             capacity,
+            write_position: 0,
         }
     }
 
     pub fn store(&mut self, state: S, action: S::Action, reward: f32, next_state: S) {
-        let new_transitions = self.data_augmenter.augment(state, action, reward, next_state);
+        let new_transitions = self
+            .data_augmenter
+            .augment(state, action, reward, next_state);
 
-        while self.transitions.len() + new_transitions.len() > self.capacity {
-            self.transitions.pop_front();
+        for transition in new_transitions.into_iter() {
+            if self.transitions.len() < self.capacity {
+                self.transitions.push(transition);
+            } else {
+                self.transitions[self.write_position] = transition;
+            }
+            self.write_position = (self.write_position + 1) % self.capacity;
         }
-
-        self.transitions.extend(new_transitions);
     }
 
     pub fn size(&self) -> usize {
