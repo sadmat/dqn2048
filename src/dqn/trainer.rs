@@ -7,11 +7,11 @@ use crate::dqn::{
     state::{ActionType, StateType},
 };
 use burn::{
+    Tensor,
     module::AutodiffModule,
     nn::loss::{HuberLossConfig, Reduction::Auto},
-    optim::{adaptor::OptimizerAdaptor, Adam, AdamConfig, GradientsParams, Optimizer},
-    tensor::{backend::AutodiffBackend, Device, TensorData},
-    Tensor,
+    optim::{Adam, AdamConfig, GradientsParams, Optimizer, adaptor::OptimizerAdaptor},
+    tensor::{Device, TensorData, backend::AutodiffBackend},
 };
 use rand::{distr::uniform::SampleRange, rng, rngs::ThreadRng, seq::IndexedRandom};
 use std::default::Default;
@@ -36,14 +36,14 @@ pub(crate) struct Hyperparameters {
 impl Hyperparameters {
     pub(crate) fn new() -> Self {
         Hyperparameters {
-            learning_rate: 0.00025,
+            learning_rate: 0.00075,
             discount_factor: 0.99,
             batch_size: 8 * 1024,
             replay_buffer_capacity: 2_u32.pow(23) as usize,
             per_alpha: 0.6,
             per_beta: 0.4,
             per_beta_increment: 0.6 / 10_000.0,
-            per_epsilon: 0.001,
+            per_epsilon: 0.0001,
             initial_epsilon: 0.5,
             epsilon_decay_frames: 7500,
             min_epsilon: 0.0001,
