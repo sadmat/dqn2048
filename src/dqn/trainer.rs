@@ -6,6 +6,7 @@ use crate::dqn::{
     replay_buffer::ReplayBuffer,
     state::{ActionType, StateType},
 };
+use burn::tensor::Int;
 use burn::{
     module::AutodiffModule,
     nn::loss::{HuberLossConfig, Reduction::Auto},
@@ -14,8 +15,8 @@ use burn::{
     Tensor,
 };
 use rand::{distr::uniform::SampleRange, rng, rngs::ThreadRng, seq::IndexedRandom};
+use std::cmp::Ordering;
 use std::default::Default;
-use std::{cmp::Ordering, f32::NEG_INFINITY};
 
 pub(crate) struct Hyperparameters {
     pub learning_rate: f32,
@@ -157,12 +158,19 @@ where
         let qvalues: Tensor<B, 1> = output
             .gather(1, batch.actions.unsqueeze_dim(1))
             .squeeze_dim(1);
+
+        let next_actions: Tensor<B::InnerBackend, 2, Int> = model
+            .valid()
+            .forward(batch.next_states.clone())
+            .mask_fill(batch.invalid_actions_mask.clone(), f32::MIN)
+            .argmax(1);
+
         let target_qvalues = target_network
             .valid()
             .forward(batch.next_states)
-            .mask_fill(batch.invalid_actions_mask, NEG_INFINITY)
-            .max_dim(1)
+            .gather(1, next_actions)
             .squeeze_dim(1);
+
         let target_qvalues = batch.rewards
             + (1.0 - batch.is_terminal) * self.config.discount_factor * target_qvalues;
         let target_qvalues = Tensor::from_inner(target_qvalues).detach();
