@@ -112,11 +112,17 @@ impl<B: AutodiffBackend> TrainingThread<B> {
                             .send(TrainingMessage::StateChanged(TrainingState::Training))
                             .unwrap();
                     }
-                    TrainingAction::Save(file_path) => {
+                    TrainingAction::SaveModel(file_path) => {
                         self.save_model(&model, file_path);
                     }
-                    TrainingAction::Load(file_path) => {
+                    TrainingAction::LoadModel(file_path) => {
                         return self.load_model(model, file_path);
+                    }
+                    TrainingAction::SaveSession(path) => {
+                        self.save_session(path);
+                    }
+                    TrainingAction::LoadSession(path) => {
+                        self.load_session(path);
                     }
                 }
             }
@@ -148,5 +154,22 @@ impl<B: AutodiffBackend> TrainingThread<B> {
         model
             .load_file(file_path, &recorder, &Default::default())
             .expect("Failed to load the model")
+    }
+
+    fn save_session(&self, path: PathBuf) {
+        // TODO:
+        // [ ] Save model
+        // [ ] Save replay buffer
+        // [ ] Save hyperparameters and other session info
+        // [ ] Save current plots
+    }
+
+    fn load_session(&mut self, path: PathBuf) {
+        // TODO:
+        // [ ] Purge previous training data
+        // [ ] Load model
+        // [ ] Load replay buffer
+        // [ ] Load hyperparameters and other session info
+        // [ ] Load current plots
     }
 }

@@ -12,8 +12,10 @@ pub(crate) enum TrainingState {
 pub(crate) enum TrainingAction {
     Start,
     Pause,
-    Save(PathBuf),
-    Load(PathBuf),
+    SaveModel(PathBuf),
+    LoadModel(PathBuf),
+    SaveSession(PathBuf),
+    LoadSession(PathBuf),
 }
 
 #[derive(Debug)]

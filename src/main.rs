@@ -23,7 +23,7 @@ use burn::backend::Wgpu;
 use num_format::{SystemLocale, ToFormattedString};
 use plotters::prelude::*;
 use rfd::FileDialog;
-use slint::{quit_event_loop, Timer, TimerMode, Weak};
+use slint::{Timer, TimerMode, Weak, quit_event_loop};
 use std::error::Error;
 use std::sync::mpsc::Sender;
 use std::sync::{Arc, Mutex};
@@ -83,7 +83,7 @@ fn setup_actions(
             let Some(file) = FileDialog::new().save_file() else {
                 return;
             };
-            action_tx.send(TrainingAction::Save(file)).unwrap();
+            action_tx.send(TrainingAction::SaveModel(file)).unwrap();
         }
     });
     actions.on_load_model({
@@ -92,7 +92,7 @@ fn setup_actions(
             let Some(file) = FileDialog::new().pick_file() else {
                 return;
             };
-            action_tx.send(TrainingAction::Load(file)).unwrap();
+            action_tx.send(TrainingAction::LoadModel(file)).unwrap();
         }
     });
     actions.on_quit(|| {
