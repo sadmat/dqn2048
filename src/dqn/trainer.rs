@@ -8,16 +8,18 @@ use crate::dqn::{
 };
 use burn::tensor::Int;
 use burn::{
+    Tensor,
     module::AutodiffModule,
     nn::loss::{HuberLossConfig, Reduction::Auto},
-    optim::{adaptor::OptimizerAdaptor, Adam, AdamConfig, GradientsParams, Optimizer},
-    tensor::{backend::AutodiffBackend, Device, TensorData},
-    Tensor,
+    optim::{Adam, AdamConfig, GradientsParams, Optimizer, adaptor::OptimizerAdaptor},
+    tensor::{Device, TensorData, backend::AutodiffBackend},
 };
 use rand::{distr::uniform::SampleRange, rng, rngs::ThreadRng, seq::IndexedRandom};
+use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
 use std::default::Default;
 
+#[derive(Serialize, Deserialize, Clone)]
 pub(crate) struct Hyperparameters {
     pub learning_rate: f32,
     pub discount_factor: f32,
@@ -225,5 +227,21 @@ where
             .unwrap();
 
         best_action.0
+    }
+
+    pub(crate) fn hyperparameters(&self) -> &Hyperparameters {
+        &self.config
+    }
+
+    pub(crate) fn replay_buffer(&self) -> &ReplayBuffer<S, D> {
+        &self.replay_buffer
+    }
+
+    pub(crate) fn epoch_number(&self) -> usize {
+        self.epoch_num
+    }
+
+    pub(crate) fn frame_number(&self) -> usize {
+        self.frame_num
     }
 }
