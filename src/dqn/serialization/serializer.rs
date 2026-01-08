@@ -27,18 +27,6 @@ use crate::dqn::{
     trainer::{Hyperparameters, Trainer},
 };
 
-#[derive(Debug)]
-enum SessionSerializationError {
-    PathNotEmpty,
-}
-
-impl Error for SessionSerializationError {}
-impl fmt::Display for SessionSerializationError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write(f, format_args!("{:?}", self))
-    }
-}
-
 pub(crate) struct TrainingSerializer {}
 
 impl TrainingSerializer {
@@ -56,9 +44,6 @@ impl TrainingSerializer {
         R: StatsRecorderType<State = S>,
         D: DataAugmenterType<State = S>,
     {
-        if !is_path_empty(&path)? {
-            return Err(SessionSerializationError::PathNotEmpty.into());
-        }
         TrainingSerializer::serialize_config(trainer, &path)?;
         TrainingSerializer::serialize_model(model, path.join("model"))?;
         TrainingSerializer::serialize_replay_buffer(trainer.replay_buffer(), &path);

@@ -97,11 +97,17 @@ fn setup_actions(
     });
     actions.on_load_session({
         let action_tx = actions_tx.clone();
+        let updates_tx = updates_tx.clone();
         move || {
             let Some(dir) = FileDialog::new().pick_folder() else {
                 return;
             };
-            action_tx.send(TrainingAction::LoadSession(dir)).unwrap();
+            action_tx
+                .send(TrainingAction::LoadSession(dir.clone()))
+                .unwrap();
+            updates_tx
+                .send(TrainingOverviewUpdate::LoadPlots(dir))
+                .unwrap();
         }
     });
     actions.on_save_session({
@@ -110,7 +116,12 @@ fn setup_actions(
             let Some(dir) = FileDialog::new().pick_folder() else {
                 return;
             };
-            action_tx.send(TrainingAction::SaveSession(dir)).unwrap();
+            action_tx
+                .send(TrainingAction::SaveSession(dir.clone()))
+                .unwrap();
+            updates_tx
+                .send(TrainingOverviewUpdate::SavePlots(dir))
+                .unwrap();
         }
     });
     actions.on_quit(|| {

@@ -2,11 +2,17 @@ use plotters::prelude::*;
 use slint::{ComponentHandle, Image, Rgb8Pixel, SharedPixelBuffer, Weak};
 
 use crate::{
-    training::{training_stats_recorder::TrainingStats, types::TrainingState}, AppWindow, PlotSize, Plots,
-    UiTrainingStats,
+    AppWindow, PlotSize, Plots, UiTrainingStats,
+    training::{training_stats_recorder::TrainingStats, types::TrainingState},
 };
 
-use std::sync::{Arc, Mutex};
+use std::{
+    error::Error,
+    fs::File,
+    iter::zip,
+    path::PathBuf,
+    sync::{Arc, Mutex},
+};
 use std::{
     sync::mpsc::*,
     thread::{self, JoinHandle},
@@ -93,6 +99,8 @@ pub(crate) enum TrainingOverviewUpdate {
     StateChanged(TrainingState),
     PlotsSizesChanged(PlotsSizes),
     PlotsSettingsChanged(PlotsSettings),
+    SavePlots(PathBuf),
+    LoadPlots(PathBuf),
 }
 
 pub(crate) struct TrainingOverviewThread {
@@ -159,6 +167,14 @@ impl TrainingOverviewThread {
                     }
                     PlotsSettingsChanged(settings) => {
                         self.handle_plots_settings_change(settings);
+                    }
+                    SavePlots(path) => {
+                        // TODO: handle error
+                        self.handle_save_plots(path).unwrap();
+                    }
+                    LoadPlots(path) => {
+                        // TODO: handle error
+                        self.handle_load_plots(path).unwrap();
                     }
                 }
             }
@@ -329,6 +345,46 @@ impl TrainingOverviewThread {
             plots.set_best_tile_plot(Image::from_rgb8(best_tile_plot));
         })
         .unwrap();
+    }
+
+    fn handle_save_plots(&self, path: PathBuf) -> Result<(), Box<dyn Error>> {
+        let file = File::create(path.join("training.csv"))?;
+        let mut writer = csv::Writer::from_writer(file);
+
+        writer.write_record(["Epoch", "Score", "Length", "Reward", "Best Tile"])?;
+
+        let records = (1u32..)
+            .zip(self.scores.iter())
+            .zip(self.epoch_length.iter())
+            .zip(self.rewards.iter())
+            .zip(self.best_tiles.iter())
+            .map(|((((a, b), c), d), e)| (a, b, c, d, e));
+
+        for record in records {
+            writer.serialize(record)?;
+        }
+        Ok(())
+    }
+
+    fn handle_load_plots(&mut self, path: PathBuf) -> Result<(), Box<dyn Error>> {
+        let file = File::open(path.join("training.csv"))?;
+        let mut reader = csv::Reader::from_reader(file);
+
+        self.scores.clear();
+        self.epoch_length.clear();
+        self.rewards.clear();
+        self.best_tiles.clear();
+
+        for result in reader.records() {
+            let record = result?;
+
+            self.scores.push(record[1].parse()?);
+            self.epoch_length.push(record[2].parse()?);
+            self.rewards.push(record[3].parse()?);
+            self.best_tiles.push(record[4].parse()?);
+        }
+
+        Ok(())
     }
 }
 
