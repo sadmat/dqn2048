@@ -1,3 +1,4 @@
+use crate::dqn::serialization::serializer::TrainingSerializer;
 use crate::training::game_model::GameModelConfig;
 use crate::training::training_data_augmenter::TrainingDataAugmenter;
 use crate::training::training_stats_recorder::{TrainingStats, TrainingStatsRecorder};
@@ -119,7 +120,7 @@ impl<B: AutodiffBackend> TrainingThread<B> {
                         return self.load_model(model, file_path);
                     }
                     TrainingAction::SaveSession(path) => {
-                        self.save_session(path);
+                        self.save_session(&model, path);
                     }
                     TrainingAction::LoadSession(path) => {
                         self.load_session(path);
@@ -156,12 +157,22 @@ impl<B: AutodiffBackend> TrainingThread<B> {
             .expect("Failed to load the model")
     }
 
-    fn save_session(&self, path: PathBuf) {
+    fn save_session(&self, model: &GameModel<B>, path: PathBuf) {
         // TODO:
-        // [ ] Save model
-        // [ ] Save replay buffer
-        // [ ] Save hyperparameters and other session info
+        // [x] Save model
+        // [x] Save replay buffer
+        // [x] Save hyperparameters and other session info
         // [ ] Save current plots
+        // [ ] Report progress
+        // [ ] Report errors
+        match TrainingSerializer::serialize(&self.trainer, model.clone(), path) {
+            Ok(()) => {
+                println!("[dbg] serialization ok!");
+            }
+            Err(error) => {
+                println!("[dbg] serialization failed: {}", error);
+            }
+        }
     }
 
     fn load_session(&mut self, path: PathBuf) {

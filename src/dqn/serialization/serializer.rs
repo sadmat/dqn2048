@@ -39,10 +39,10 @@ impl fmt::Display for SessionSerializationError {
     }
 }
 
-struct TrainingSerializer {}
+pub(crate) struct TrainingSerializer {}
 
 impl TrainingSerializer {
-    fn serialize<B, M, S, C, R, D>(
+    pub(crate) fn serialize<B, M, S, C, R, D>(
         trainer: &Trainer<B, M, S, C, R, D>,
         model: M,
         path: PathBuf,

@@ -95,6 +95,24 @@ fn setup_actions(
             action_tx.send(TrainingAction::LoadModel(file)).unwrap();
         }
     });
+    actions.on_load_session({
+        let action_tx = actions_tx.clone();
+        move || {
+            let Some(dir) = FileDialog::new().pick_folder() else {
+                return;
+            };
+            action_tx.send(TrainingAction::LoadSession(dir)).unwrap();
+        }
+    });
+    actions.on_save_session({
+        let action_tx = actions_tx.clone();
+        move || {
+            let Some(dir) = FileDialog::new().pick_folder() else {
+                return;
+            };
+            action_tx.send(TrainingAction::SaveSession(dir)).unwrap();
+        }
+    });
     actions.on_quit(|| {
         quit_event_loop().unwrap();
     });

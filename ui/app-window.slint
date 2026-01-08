@@ -35,6 +35,22 @@ export component AppWindow inherits Window {
             MenuSeparator { }
 
             MenuItem {
+                title: "save session";
+                activated => {
+                    Actions.save-session();
+                }
+            }
+
+            MenuItem {
+                title: "load session";
+                activated => {
+                    Actions.load-session();
+                }
+            }
+
+            MenuSeparator { }
+
+            MenuItem {
                 title: "quit";
                 activated => {
                     Actions.quit();
