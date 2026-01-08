@@ -1,5 +1,6 @@
 use std::{
     error::Error,
+    fmt::{self, write},
     fs::File,
     io::{self, BufWriter, Write},
     path::PathBuf,
@@ -25,6 +26,18 @@ use crate::dqn::{
     trainer::{Hyperparameters, Trainer},
 };
 
+#[derive(Debug)]
+enum SessionSerializationError {
+    PathNotEmpty,
+}
+
+impl Error for SessionSerializationError {}
+impl fmt::Display for SessionSerializationError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write(f, format_args!("{:?}", self))
+    }
+}
+
 struct TrainingSerializer {}
 
 impl TrainingSerializer {
@@ -42,7 +55,9 @@ impl TrainingSerializer {
         R: StatsRecorderType<State = S>,
         D: DataAugmenterType<State = S>,
     {
-        // TODO: check if path is empty
+        if !is_path_empty(&path)? {
+            return Err(SessionSerializationError::PathNotEmpty.into());
+        }
         TrainingSerializer::serialize_config(trainer, &path)?;
         TrainingSerializer::serialize_model(model, path.join("model"))?;
         Ok(())
@@ -102,4 +117,10 @@ impl TrainingSerializer {
         // [ ] Dump replay buffer chunk by chunk
         Ok(())
     }
+}
+
+fn is_path_empty(path: &PathBuf) -> Result<bool, Box<dyn Error>> {
+    path.read_dir()
+        .and_then(|mut entry| Ok(entry.next().is_none()))
+        .map_err(|err| err.into())
 }
