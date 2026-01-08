@@ -1,12 +1,9 @@
 use std::{
     error::Error,
-    fmt::{self, write},
     fs::{self, File},
-    io::{self, BufWriter, Write},
+    io::BufWriter,
     path::PathBuf,
 };
-
-// use core::error::Error;
 
 use burn::{
     module::{AutodiffModule, Module},
@@ -14,17 +11,17 @@ use burn::{
     record::{DefaultFileRecorder, FullPrecisionSettings},
     tensor::backend::AutodiffBackend,
 };
-use zstd::stream::{AutoFinishEncoder, write::Encoder};
+use zstd::stream::write::Encoder;
 
 use crate::dqn::{
     critic::CriticType,
     data_augmenter::DataAugmenterType,
     model::Model,
-    replay_buffer::{self, ReplayBuffer},
+    replay_buffer::ReplayBuffer,
     serialization::training_config::{ReplayBufferConfig, TrainingConfig, TrainingInfo},
     state::StateType,
     stats::StatsRecorderType,
-    trainer::{Hyperparameters, Trainer},
+    trainer::Trainer,
 };
 
 pub(crate) struct TrainingSerializer {}
@@ -46,7 +43,7 @@ impl TrainingSerializer {
     {
         TrainingSerializer::serialize_config(trainer, &path)?;
         TrainingSerializer::serialize_model(model, path.join("model"))?;
-        TrainingSerializer::serialize_replay_buffer(trainer.replay_buffer(), &path);
+        TrainingSerializer::serialize_replay_buffer(trainer.replay_buffer(), &path)?;
         Ok(())
     }
 
