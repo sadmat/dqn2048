@@ -1,7 +1,7 @@
 use std::{
     error::Error,
     fmt::{self, write},
-    fs::File,
+    fs::{self, File},
     io::{self, BufWriter, Write},
     path::PathBuf,
 };
@@ -14,6 +14,7 @@ use burn::{
     record::{DefaultFileRecorder, FullPrecisionSettings},
     tensor::backend::AutodiffBackend,
 };
+use zstd::stream::{AutoFinishEncoder, write::Encoder};
 
 use crate::dqn::{
     critic::CriticType,
@@ -60,6 +61,7 @@ impl TrainingSerializer {
         }
         TrainingSerializer::serialize_config(trainer, &path)?;
         TrainingSerializer::serialize_model(model, path.join("model"))?;
+        TrainingSerializer::serialize_replay_buffer(trainer.replay_buffer(), &path);
         Ok(())
     }
 
@@ -105,16 +107,35 @@ impl TrainingSerializer {
     }
 
     fn serialize_replay_buffer<S, D>(
-        replay_buffer: ReplayBuffer<S, D>,
+        replay_buffer: &ReplayBuffer<S, D>,
         path: &PathBuf,
     ) -> Result<(), Box<dyn Error>>
     where
         S: StateType,
         D: DataAugmenterType<State = S>,
     {
-        // TODO:
-        // [ ] Create new directory
-        // [ ] Dump replay buffer chunk by chunk
+        let replay_buffer_dir = path.join("replay_buffer");
+        let chunk_size = 2_u32.pow(16) as usize;
+        let mut chunk_start = 0;
+        let mut chunk_number = 1;
+
+        fs::create_dir(replay_buffer_dir.clone())?;
+
+        while chunk_start < replay_buffer.size() {
+            println!(
+                "[dbg] Processing chunk #{chunk_number} [{chunk_start}..{}]",
+                chunk_start + chunk_size
+            );
+            let chunk = replay_buffer.transitions(chunk_start, chunk_start + chunk_size);
+            let file_path = replay_buffer_dir.join(format!("{:05}.chunk", chunk_number));
+            let file = File::create(file_path)?;
+            let encoder = Encoder::new(file, 3)?.auto_finish();
+            bincode::serialize_into(encoder, chunk)?;
+
+            chunk_start += chunk_size;
+            chunk_number += 1;
+        }
+
         Ok(())
     }
 }
