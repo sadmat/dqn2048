@@ -3,6 +3,7 @@ use crate::{
     game::{board::Board, game_rng::RealGameRng},
 };
 
+#[derive(Default)]
 pub(crate) struct TrainingCritic {}
 
 impl TrainingCritic {
@@ -27,7 +28,9 @@ impl CriticType for TrainingCritic {
         let score_gain = (next_state.score.saturating_sub(state.score)) as f32;
         let score_reward = if score_gain > 0.0 {
             score_gain.log2() * 0.1
-        } else { 0.0 };
+        } else {
+            0.0
+        };
 
         let empty_reward = next_state.num_empty_tiles() as f32 / 16.0;
 

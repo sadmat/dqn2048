@@ -1,6 +1,6 @@
 use crate::dqn::state::StateType;
 
-pub(crate) trait CriticType {
+pub(crate) trait CriticType: Default {
     type State: StateType;
 
     fn reward(

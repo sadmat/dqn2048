@@ -1,11 +1,10 @@
 use burn::tensor::backend::AutodiffBackend;
-use rand::Rng;
 use rand::seq::IndexedRandom;
+use rand::Rng;
 use serde::{Deserialize, Serialize};
-use std::collections::VecDeque;
-use std::ops::Range;
 
 use crate::dqn::data_augmenter::DataAugmenterType;
+use crate::dqn::serialization::training_config::ReplayBufferConfig;
 use crate::dqn::state::ActionType;
 use crate::dqn::{state::StateType, training_batch::TrainingBatch};
 
@@ -23,6 +22,15 @@ impl<S: StateType, D: DataAugmenterType<State = S>> ReplayBuffer<S, D> {
             transitions: Vec::with_capacity(capacity),
             capacity,
             write_position: 0,
+        }
+    }
+
+    pub fn from(transitions: Vec<StateTransition>, config: &ReplayBufferConfig) -> Self {
+        ReplayBuffer {
+            data_augmenter: Default::default(),
+            transitions,
+            capacity: config.capacity,
+            write_position: config.write_position,
         }
     }
 

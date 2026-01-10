@@ -1,4 +1,5 @@
 use crate::dqn::data_augmenter::DataAugmenterType;
+use crate::dqn::serialization::training_config::TrainingConfig;
 use crate::dqn::stats::StatsRecorderType;
 use crate::dqn::{
     critic::CriticType,
@@ -8,11 +9,11 @@ use crate::dqn::{
 };
 use burn::tensor::Int;
 use burn::{
-    Tensor,
     module::AutodiffModule,
     nn::loss::{HuberLossConfig, Reduction::Auto},
-    optim::{Adam, AdamConfig, GradientsParams, Optimizer, adaptor::OptimizerAdaptor},
-    tensor::{Device, TensorData, backend::AutodiffBackend},
+    optim::{adaptor::OptimizerAdaptor, Adam, AdamConfig, GradientsParams, Optimizer},
+    tensor::{backend::AutodiffBackend, Device, TensorData},
+    Tensor,
 };
 use rand::{distr::uniform::SampleRange, rng, rngs::ThreadRng, seq::IndexedRandom};
 use serde::{Deserialize, Serialize};
@@ -96,6 +97,24 @@ where
             stats_recorder: Default::default(),
             epoch_num: 0,
             frame_num: 0,
+            target_network: None,
+        }
+    }
+
+    pub fn from(
+        config: TrainingConfig,
+        replay_buffer: ReplayBuffer<S, D>,
+        device: Device<B>,
+    ) -> Self {
+        Trainer {
+            config: config.hyperparameters,
+            critic: Default::default(),
+            replay_buffer,
+            optimizer: AdamConfig::new().init(),
+            device,
+            stats_recorder: Default::default(),
+            epoch_num: config.training_info.epoch_number,
+            frame_num: config.training_info.frame_number,
             target_network: None,
         }
     }

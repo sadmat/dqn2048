@@ -1,14 +1,11 @@
+use crate::dqn::serialization::deserializer::TrainingDeserializer;
 use crate::dqn::serialization::serializer::TrainingSerializer;
 use crate::training::game_model::GameModelConfig;
 use crate::training::training_data_augmenter::TrainingDataAugmenter;
 use crate::training::training_stats_recorder::{TrainingStats, TrainingStatsRecorder};
-use crate::training::types::TrainingState::Training;
+use crate::training::types::TrainingMessage::StateChanged;
 use crate::{
-    dqn::{
-        critic::CriticType,
-        model::Model,
-        trainer::{Hyperparameters, Trainer},
-    },
+    dqn::trainer::{Hyperparameters, Trainer},
     game::{board::Board, game_rng::RealGameRng},
     training::{
         game_model::GameModel,
@@ -16,14 +13,8 @@ use crate::{
         types::{TrainingAction, TrainingMessage, TrainingState},
     },
 };
-use burn::prelude::Device;
-use burn::record::{DefaultFileRecorder, FullPrecisionSettings, Recorder};
-use burn::{
-    Tensor,
-    module::Module,
-    prelude::{Backend, Float},
-    tensor::backend::AutodiffBackend,
-};
+use burn::record::{DefaultFileRecorder, FullPrecisionSettings};
+use burn::{module::Module, tensor::backend::AutodiffBackend};
 use std::path::PathBuf;
 use std::sync::mpsc;
 use std::sync::mpsc::{Receiver, Sender, TryRecvError};
@@ -34,13 +25,15 @@ use std::time::Duration;
 pub(crate) struct TrainingThread<B: AutodiffBackend> {
     actions: Receiver<TrainingAction>,
     messages: Sender<TrainingMessage>,
-    trainer: Trainer<
-        B,
-        GameModel<B>,
-        Board<RealGameRng>,
-        TrainingCritic,
-        TrainingStatsRecorder,
-        TrainingDataAugmenter,
+    trainer: Option<
+        Trainer<
+            B,
+            GameModel<B>,
+            Board<RealGameRng>,
+            TrainingCritic,
+            TrainingStatsRecorder,
+            TrainingDataAugmenter,
+        >,
     >,
     training_state: TrainingState,
 }
@@ -71,12 +64,12 @@ impl<B: AutodiffBackend> TrainingThread<B> {
         TrainingThread {
             actions,
             messages,
-            trainer: Trainer::new(
+            trainer: Some(Trainer::new(
                 hyperparams,
                 TrainingCritic::new(),
                 TrainingDataAugmenter::default(),
                 Default::default(),
-            ),
+            )),
             training_state: TrainingState::Idle,
         }
     }
@@ -87,7 +80,15 @@ impl<B: AutodiffBackend> TrainingThread<B> {
         loop {
             model = self.handle_action(model);
             if self.training_state == TrainingState::Training {
-                let (updated_model, stats) = self.trainer.run_epoch(model);
+                let Some(ref mut trainer) = self.trainer else {
+                    // TODO: refactor this out
+                    self.training_state = TrainingState::Idle;
+                    self.messages
+                        .send(StateChanged(TrainingState::Idle))
+                        .unwrap();
+                    continue;
+                };
+                let (updated_model, stats) = trainer.run_epoch(model);
                 model = updated_model;
                 self.report_progress(stats);
             } else {
@@ -123,7 +124,7 @@ impl<B: AutodiffBackend> TrainingThread<B> {
                         self.save_session(&model, path);
                     }
                     TrainingAction::LoadSession(path) => {
-                        self.load_session(path);
+                        return self.load_session(model, path);
                     }
                 }
             }
@@ -158,6 +159,10 @@ impl<B: AutodiffBackend> TrainingThread<B> {
     }
 
     fn save_session(&self, model: &GameModel<B>, path: PathBuf) {
+        let Some(ref trainer) = self.trainer else {
+            println!("[dbg] trainer is None!");
+            return;
+        };
         // TODO:
         // [x] Save model
         // [x] Save replay buffer
@@ -165,7 +170,7 @@ impl<B: AutodiffBackend> TrainingThread<B> {
         // [ ] Save current plots
         // [ ] Report progress
         // [ ] Report errors
-        match TrainingSerializer::serialize(&self.trainer, model.clone(), path) {
+        match TrainingSerializer::serialize(trainer, model.clone(), path) {
             Ok(()) => {
                 println!("[dbg] serialization ok!");
             }
@@ -175,12 +180,24 @@ impl<B: AutodiffBackend> TrainingThread<B> {
         }
     }
 
-    fn load_session(&mut self, path: PathBuf) {
+    fn load_session(&mut self, model: GameModel<B>, path: PathBuf) -> GameModel<B> {
+        self.trainer = None;
         // TODO:
         // [ ] Purge previous training data
         // [ ] Load model
         // [ ] Load replay buffer
         // [ ] Load hyperparameters and other session info
         // [ ] Load current plots
+        match TrainingDeserializer::deserialize(path, model.clone()) {
+            Ok((trainer, model)) => {
+                println!("[dbg] deserialization ok!");
+                self.trainer = Some(trainer);
+                model
+            }
+            Err(error) => {
+                println!("[dbg] deserialization failed: {}", error);
+                model
+            }
+        }
     }
 }
